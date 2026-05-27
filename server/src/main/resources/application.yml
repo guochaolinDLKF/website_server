@@ -1,0 +1,8 @@
+# 应用配置
+server:
+  port: 8000
+
+# 环境配置 - 选择使用哪个环境
+spring:
+  profiles:
+    active: local-dev  # 可选值: local-dev,dev, prod,arraignment

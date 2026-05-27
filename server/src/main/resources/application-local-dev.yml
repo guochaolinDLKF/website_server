@@ -1,0 +1,177 @@
+# 本地开发环境配置 — 完整的框架配置模板
+
+# 数据库配置变量
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  database: operations
+  username: ydzz
+  password: 'yd.zzCC#$keji'
+
+# Redis配置变量
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: "ydzz.@KeJi#."
+  database: 0
+
+spring:
+  application:
+    name: server
+  
+  # 数据源配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${mysql.username}
+    password: ${mysql.password}
+
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 50
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        reset-enable: false
+        login-username: admin
+        login-password: admin123
+        allow: 127.0.0.1
+
+  # Redis配置
+  data:
+    redis:
+      host: ${redis.host}
+      port: ${redis.port}
+      password: ${redis.password}
+      database: ${redis.database}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 50
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+  # Redisson配置
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+          retryAttempts: 3
+          retryInterval: 1500
+          password: ${redis.password}
+          subscriptionsPerConnection: 5
+          clientName: null
+          address: "redis://${redis.host}:${redis.port}"
+          subscriptionConnectionMinimumIdleSize: 1
+          subscriptionConnectionPoolSize: 50
+          connectionMinimumIdleSize: 24
+          connectionPoolSize: 64
+          database: ${redis.database}
+          dnsMonitoringInterval: 5000
+        threads: 16
+        nettyThreads: 32
+        codec: !<org.redisson.client.codec.StringCodec> {}
+        transportMode: "NIO"
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+    call-setters-on-nulls: true
+    jdbc-type-for-null: 'null'
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.ydzz.entity
+
+# Sa-Token配置
+sa-token:
+  token-name: Authorization
+  timeout: 259200
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: true
+  token-prefix: "satoken:"
+  is-read-cookie: false
+  is-read-header: true
+  is-read-body: false
+
+# JetCache配置
+jetcache:
+  statIntervalMinutes: 1
+  areaInCacheName: false
+  local:
+    default:
+      type: caffeine
+      keyConvertor: fastjson2
+      expireAfterWriteInMillis: 3600000
+  remote:
+    default:
+      database: ${redis.database}
+      type: redisson
+      keyConvertor: fastjson2
+      valueEncoder: java
+      valueDecoder: java
+      defaultExpireInMillis: 3600000
+      keyPrefix: "jetcache:"
+      broadcastChannel: "jetcache"
+  enableMethodCache: true
+  enableCreateCacheAnnotation: true
+
+# Swagger配置
+springdoc:
+  enabled: true
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    disable-swagger-default-url: true
+    defaultModelsExpandDepth: -1
+    defaultModelExpandDepth: -1
+    doc-expansion: none
+  packages-to-scan: com.ydzz.controller
+  paths-to-match: /**
+
+# 健康检查配置
+health:
+  check:
+    interval-ms: 300000  # 定时健康检查间隔（毫秒），默认 5 分钟
+
+# 日志配置
+logging:
+  level:
+    com.ydzz: debug
+    org.springframework: info
+    org.mybatis: debug

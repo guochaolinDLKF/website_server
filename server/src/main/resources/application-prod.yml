@@ -1,0 +1,89 @@
+# 生产环境配置模板
+
+mysql:
+  host: your_prod_host
+  port: 3306
+  database: your_database
+  username: your_username
+  password: 'your_password'
+
+redis:
+  host: your_prod_host
+  port: 6379
+  password: ""
+  database: 0
+
+spring:
+  application:
+    name: server
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${mysql.username}
+    password: ${mysql.password}
+    druid:
+      initial-size: 20
+      min-idle: 20
+      max-active: 200
+      max-wait: 60000
+      validation-query: SELECT 1
+      test-while-idle: true
+  data:
+    redis:
+      host: ${redis.host}
+      port: ${redis.port}
+      password: ${redis.password}
+      database: ${redis.database}
+      timeout: 10000ms
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://${redis.host}:${redis.port}"
+          password: ${redis.password}
+          database: ${redis.database}
+          connectionPoolSize: 64
+          connectionMinimumIdleSize: 24
+        codec: !<org.redisson.client.codec.StringCodec> {}
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.ydzz.entity
+
+sa-token:
+  token-name: Authorization
+  timeout: 259200
+  is-concurrent: true
+  is-share: true
+  is-log: false
+  is-read-header: true
+
+jetcache:
+  remote:
+    default:
+      database: ${redis.database}
+      type: redisson
+      keyConvertor: fastjson2
+      valueEncoder: java
+      valueDecoder: java
+      defaultExpireInMillis: 3600000
+      keyPrefix: "jetcache:"
+  local:
+    default:
+      type: caffeine
+      keyConvertor: fastjson2
+      expireAfterWriteInMillis: 3600000
+
+springdoc:
+  enabled: false
+
+# 健康检查配置
+health:
+  check:
+    interval-ms: 600000
+
+logging:
+  level:
+    com.ydzz: info
+    org.springframework: warn

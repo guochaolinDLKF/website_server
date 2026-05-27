@@ -1,0 +1,124 @@
+# 开发环境配置模板 — 远程开发环境用
+# 使用时修改 mysql.host 和 redis.host 为实际地址
+
+mysql:
+  host: your_dev_host
+  port: 3306
+  database: your_database
+  username: your_username
+  password: 'your_password'
+
+redis:
+  host: your_dev_host
+  port: 6379
+  password: ""
+  database: 0
+
+spring:
+  application:
+    name: server
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${mysql.username}
+    password: ${mysql.password}
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 100
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      filters: stat,wall,slf4j
+  data:
+    redis:
+      host: ${redis.host}
+      port: ${redis.port}
+      password: ${redis.password}
+      database: ${redis.database}
+      timeout: 10000ms
+      lettuce:
+        pool:
+          max-active: 50
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+  redis:
+    redisson:
+      config: |
+        singleServerConfig:
+          address: "redis://${redis.host}:${redis.port}"
+          password: ${redis.password}
+          database: ${redis.database}
+          connectionPoolSize: 64
+          connectionMinimumIdleSize: 24
+          idleConnectionTimeout: 10000
+          connectTimeout: 10000
+          timeout: 3000
+        threads: 16
+        nettyThreads: 32
+        codec: !<org.redisson.client.codec.StringCodec> {}
+        transportMode: "NIO"
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    cache-enabled: false
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.ydzz.entity
+
+sa-token:
+  token-name: Authorization
+  timeout: 259200
+  active-timeout: -1
+  is-concurrent: true
+  is-share: true
+  token-style: uuid
+  is-log: true
+  token-prefix: "satoken:"
+  is-read-cookie: false
+  is-read-header: true
+
+jetcache:
+  statIntervalMinutes: 1
+  areaInCacheName: false
+  local:
+    default:
+      type: caffeine
+      keyConvertor: fastjson2
+      expireAfterWriteInMillis: 3600000
+  remote:
+    default:
+      database: ${redis.database}
+      type: redisson
+      keyConvertor: fastjson2
+      valueEncoder: java
+      valueDecoder: java
+      defaultExpireInMillis: 3600000
+      keyPrefix: "jetcache:"
+      broadcastChannel: "jetcache"
+
+springdoc:
+  enabled: true
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  packages-to-scan: com.ydzz.controller
+
+# 健康检查配置
+health:
+  check:
+    interval-ms: 300000
+
+logging:
+  level:
+    com.ydzz: info
+    org.springframework: warn
