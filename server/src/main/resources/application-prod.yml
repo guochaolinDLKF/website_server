@@ -1,34 +1,49 @@
-# 生产环境配置模板
+# ============================================================
+# 生产环境配置（application-prod.yml）
+# 
+# 适用场景：正式上线的生产服务器
+# 特点：日志精简、Swagger 关闭、连接池最大、只输出必要信息
+# ============================================================
 
+# ---------- MySQL 连接变量 ----------
 mysql:
-  host: your_prod_host
-  port: 3306
-  database: your_database
-  username: your_username
-  password: 'your_password'
+  host: your_prod_host                  # 生产数据库 IP
+  port: 3306                            # 数据库端口
+  database: your_database               # 数据库名
+  username: your_username               # 用户名
+  password: 'your_password'             # 密码
 
+# ---------- Redis 连接变量 ----------
 redis:
-  host: your_prod_host
-  port: 6379
-  password: ""
-  database: 0
+  host: your_prod_host                  # 生产 Redis IP
+  port: 6379                            # Redis 端口
+  password: ""                          # Redis 密码
+  database: 0                           # 数据库编号
 
+
+# ============================================================
+# Spring 框架配置
+# ============================================================
 spring:
   application:
-    name: server
+    name: server                        # 应用名称
+
+  # ---------- 数据源 ----------
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource  # 连接池类型
+    driver-class-name: com.mysql.cj.jdbc.Driver   # 数据库驱动
     url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${mysql.username}
     password: ${mysql.password}
     druid:
-      initial-size: 20
-      min-idle: 20
-      max-active: 200
-      max-wait: 60000
-      validation-query: SELECT 1
-      test-while-idle: true
+      initial-size: 20                  # 启动时初始连接数（生产环境适当增大）
+      min-idle: 20                      # 最小空闲连接数
+      max-active: 200                   # 最大活跃连接数（根据并发量调整）
+      max-wait: 60000                   # 获取连接最大等待时间
+      validation-query: SELECT 1        # 连接有效性检测
+      test-while-idle: true             # 空闲时检测
+
+  # ---------- Redis ----------
   data:
     redis:
       host: ${redis.host}
@@ -36,6 +51,8 @@ spring:
       password: ${redis.password}
       database: ${redis.database}
       timeout: 10000ms
+
+  # ---------- Redisson ----------
   redis:
     redisson:
       config: |
@@ -47,43 +64,91 @@ spring:
           connectionMinimumIdleSize: 24
         codec: !<org.redisson.client.codec.StringCodec> {}
 
+
+# ============================================================
+# MyBatis Plus 配置
+# ============================================================
 mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.ydzz.entity
+  mapper-locations: classpath*:/mapper/**/*.xml  # XML 映射文件位置
+  type-aliases-package: com.ydzz.entity          # 实体类包
 
+
+# ============================================================
+# Sa-Token 认证配置
+# ============================================================
 sa-token:
-  token-name: Authorization
-  timeout: 259200
-  is-concurrent: true
-  is-share: true
-  is-log: false
-  is-read-header: true
+  token-name: Authorization             # Token 请求头名称
+  timeout: 259200                       # 有效期（秒），3 天
+  is-concurrent: true                   # 允许并发登录
+  is-share: true                        # 共用 Token
+  is-log: false                         # 生产环境关闭操作日志（减少日志量）
+  is-read-header: true                  # 从请求头读取 Token
 
+
+# ============================================================
+# JetCache 缓存配置
+# ============================================================
 jetcache:
-  remote:
+  remote:                               # 只配远程缓存（Redis），本地缓存按需开启
     default:
       database: ${redis.database}
-      type: redisson
+      type: redisson                    # 通过 Redisson 连接 Redis
       keyConvertor: fastjson2
       valueEncoder: java
       valueDecoder: java
-      defaultExpireInMillis: 3600000
+      defaultExpireInMillis: 3600000    # 默认 1 小时过期
       keyPrefix: "jetcache:"
-  local:
+  local:                                # 本地缓存（生产环境谨慎使用，注意内存占用）
     default:
       type: caffeine
       keyConvertor: fastjson2
       expireAfterWriteInMillis: 3600000
 
-springdoc:
-  enabled: false
 
+# ============================================================
+# Swagger 配置（生产环境必须关闭！）
+# ============================================================
+springdoc:
+  enabled: false                        # 生产环境关闭 Swagger，防止接口泄露
+
+
+# ============================================================
 # 健康检查配置
+# ============================================================
 health:
   check:
-    interval-ms: 600000
+    interval-ms: 600000                 # 10 分钟检查一次（生产环境频率降低）
 
+
+# ============================================================
+# 日志配置（生产环境 — 精简，只记录关键信息和异常）
+# ============================================================
 logging:
   level:
-    com.ydzz: info
-    org.springframework: warn
+    # ------ 应用代码 ------
+    com.ydzz: info                      # 应用业务日志
+
+    # ------ Spring 框架 ------
+    org.springframework: warn           # 框架主体
+    org.springframework.web: warn       # Web 层
+    org.springframework.boot: warn      # 启动信息
+
+    # ------ 数据库（生产不打印 SQL） ------
+    org.mybatis: warn
+    org.springframework.jdbc: warn
+    org.springframework.transaction: warn
+    com.alibaba.druid: warn
+
+    # ------ 缓存 ------
+    com.alicp.jetcache: warn
+    org.springframework.cache: warn
+
+    # ------ Redis（只记录严重错误） ------
+    org.redisson: error
+    org.springframework.data.redis: error
+
+    # ------ 认证 ------
+    cn.dev33.satoken: warn
+
+    # ------ Web 容器（只记录严重错误） ------
+    org.apache.catalina: error

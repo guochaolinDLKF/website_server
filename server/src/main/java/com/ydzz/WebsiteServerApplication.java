@@ -19,7 +19,7 @@ import java.sql.Connection;
 /**
  * 应用程序主入口
  *
- * @author FortuneTelling
+ * @author WebsiteServer
  * @since 1.0.0
  */
 @Slf4j
@@ -27,7 +27,7 @@ import java.sql.Connection;
 @MapperScan("com.ydzz.mapper")
 @EnableAsync
 @EnableScheduling
-public class FortuneTellingApplication {
+public class WebsiteServerApplication {
 
     @Autowired
     private DataSource dataSource;
@@ -36,15 +36,18 @@ public class FortuneTellingApplication {
     private StringRedisTemplate stringRedisTemplate;
 
     public static void main(String[] args) {
-        ConfigurableApplicationContext context = SpringApplication.run(FortuneTellingApplication.class, args);
+        ConfigurableApplicationContext context = SpringApplication.run(WebsiteServerApplication.class, args);
         ConfigurableEnvironment env = context.getEnvironment();
         String port = env.getProperty("server.port", "8080");
+        String address = env.getProperty("server.address");
+        String host = (address != null && !address.isEmpty()) ? address : "localhost";
+        String contextPath = env.getProperty("server.servlet.context-path", "");
 
-        System.out.println("========================================");
-        System.out.println("  应用启动成功！");
-        System.out.println("  访问地址: http://localhost:" + port);
-        System.out.println("  Swagger:  http://localhost:" + port + "/swagger-ui.html");
-        System.out.println("========================================");
+        log.info("========================================");
+        log.info("  应用启动成功！");
+        log.info("  访问地址: http://{}:{}{}", host, port, contextPath);
+        log.info("  Swagger:  http://{}:{}{}/swagger-ui.html", host, port, contextPath);
+        log.info("========================================");
     }
 
     /**

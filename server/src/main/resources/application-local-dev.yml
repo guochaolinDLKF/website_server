@@ -1,177 +1,254 @@
-# 本地开发环境配置 — 完整的框架配置模板
+# ============================================================
+# 本地开发环境配置（application-local-dev.yml）
+# 
+# 适用场景：开发人员在本地电脑上开发调试
+# 特点：日志最详细、Swagger 开启、SQL 打印到控制台、Druid 监控开启
+# ============================================================
 
-# 数据库配置变量
+# ============================================================
+# 一、基础连接变量（方便统一修改）
+# 下方所有配置中的 ${mysql.xxx} 和 ${redis.xxx} 都引用了这里定义的变量
+# 切换环境时只需改这里的值，不用到处找
+# ============================================================
+
+# ---------- MySQL 数据库连接变量 ----------
 mysql:
-  host: 127.0.0.1
-  port: 3306
-  database: operations
-  username: ydzz
-  password: 'yd.zzCC#$keji'
+  host: 127.0.0.1                       # 数据库服务器 IP 地址，本机用 127.0.0.1
+  port: 3306                            # 数据库端口，MySQL 默认 3306
+  database: operations                  # 数据库名
+  username: ydzz                        # 数据库用户名
+  password: 'yd.zzCC#$keji'             # 数据库密码（含特殊字符时用单引号包裹）
 
-# Redis配置变量
+# ---------- Redis 连接变量 ----------
 redis:
-  host: 127.0.0.1
-  port: 6379
-  password: "ydzz.@KeJi#."
-  database: 0
+  host: 127.0.0.1                       # Redis 服务器 IP 地址
+  port: 6379                            # Redis 端口，默认 6379
+  password: "ydzz.@KeJi#."              # Redis 密码（含 # 时必须用双引号包裹，否则 # 会被当成注释）
+  database: 0                           # 使用的 Redis 数据库编号（0-15），默认 0
 
+
+# ============================================================
+# 二、Spring 框架配置
+# ============================================================
 spring:
   application:
-    name: server
-  
-  # 数据源配置
+    name: server                        # 应用名称，用于日志、监控等标识
+
+  # ---------- 数据源配置（连接数据库） ----------
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource  # 使用 Druid 连接池（比默认 HikariCP 功能更强，带监控面板）
+    driver-class-name: com.mysql.cj.jdbc.Driver   # MySQL JDBC 驱动类
     url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${mysql.username}
-    password: ${mysql.password}
+    # 连接 URL 参数说明：
+    #   useUnicode=true           → 使用 Unicode 编码
+    #   characterEncoding=utf8    → 字符集 UTF-8
+    #   useSSL=false              → 本地开发关闭 SSL（生产环境建议开启）
+    #   serverTimezone=Asia/Shanghai → 时区设为东八区
+    #   allowPublicKeyRetrieval=true → 允许客户端获取公钥（MySQL 8.0+ 需要）
+    username: ${mysql.username}          # 引用上方 mysql.username 变量
+    password: ${mysql.password}          # 引用上方 mysql.password 变量
 
+    # ---------- Druid 连接池详细配置 ----------
     druid:
-      initial-size: 10
-      min-idle: 10
-      max-active: 50
-      max-wait: 60000
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      max-pool-prepared-statement-per-connection-size: 20
-      filters: stat,wall,slf4j
-      web-stat-filter:
-        enabled: true
-        url-pattern: /*
-        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
-      stat-view-servlet:
-        enabled: true
-        url-pattern: /druid/*
-        reset-enable: false
-        login-username: admin
-        login-password: admin123
-        allow: 127.0.0.1
+      initial-size: 10                   # 启动时创建的连接数
+      min-idle: 10                       # 连接池中最少保持的空闲连接数
+      max-active: 50                     # 连接池中最大活跃连接数（并发高时可调大）
+      max-wait: 60000                    # 获取连接的最大等待时间（毫秒），超时会报错
+      time-between-eviction-runs-millis: 60000   # 检测空闲连接的间隔时间（毫秒）
+      min-evictable-idle-time-millis: 300000     # 连接在池中最小空闲时间（毫秒），超过则回收
+      validation-query: SELECT 1         # 验证连接是否有效的 SQL（MySQL 用 SELECT 1）
+      test-while-idle: true              # 空闲时检测连接有效性
+      test-on-borrow: false              # 获取连接时检测（影响性能，建议 false）
+      test-on-return: false              # 归还连接时检测（影响性能，建议 false）
+      pool-prepared-statements: true     # 缓存 PreparedStatement，提升 SQL 性能
+      max-pool-prepared-statement-per-connection-size: 20  # 每个连接最多缓存的 PreparedStatement 数量
+      filters: stat,wall,slf4j           # 启用的过滤器：stat=统计, wall=防 SQL 注入, slf4j=日志
 
-  # Redis配置
+      # Druid Web 监控过滤器（统计 Web 请求的 SQL 执行情况）
+      web-stat-filter:
+        enabled: true                    # 开启 Web 统计
+        url-pattern: /*                  # 统计所有请求
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"  # 排除静态资源和监控页面自身
+
+      # Druid 监控面板（访问 http://localhost:8000/druid/）
+      stat-view-servlet:
+        enabled: true                    # 开启监控面板
+        url-pattern: /druid/*            # 监控面板访问路径
+        reset-enable: false              # 禁止通过页面重置统计数据
+        login-username: admin            # 监控面板登录用户名
+        login-password: admin123         # 监控面板登录密码
+        allow: 127.0.0.1                 # 只允许本机访问（安全），生产环境改为具体 IP
+
+  # ---------- Redis 配置（使用 Lettuce 客户端） ----------
   data:
     redis:
-      host: ${redis.host}
-      port: ${redis.port}
-      password: ${redis.password}
-      database: ${redis.database}
-      timeout: 10000ms
+      host: ${redis.host}               # 引用 redis.host 变量
+      port: ${redis.port}               # 引用 redis.port 变量
+      password: ${redis.password}       # 引用 redis.password 变量
+      database: ${redis.database}       # 引用 redis.database 变量
+      timeout: 10000ms                   # 连接超时时间（毫秒）
       lettuce:
         pool:
-          max-active: 50
-          max-wait: -1ms
-          max-idle: 8
-          min-idle: 0
+          max-active: 50                 # 连接池最大连接数
+          max-wait: -1ms                 # 获取连接最大等待时间，-1 表示无限等待
+          max-idle: 8                    # 连接池最大空闲连接数
+          min-idle: 0                    # 连接池最小空闲连接数
 
-  # Redisson配置
+  # ---------- Redisson 配置（高级 Redis 客户端，提供分布式锁等功能） ----------
+  # 注意：这里的 spring.redis.redisson 和上面的 spring.data.redis 是两个不同的配置路径
   redis:
     redisson:
-      config: |
-        singleServerConfig:
-          idleConnectionTimeout: 10000
-          connectTimeout: 10000
-          timeout: 3000
-          retryAttempts: 3
-          retryInterval: 1500
-          password: ${redis.password}
-          subscriptionsPerConnection: 5
-          clientName: null
-          address: "redis://${redis.host}:${redis.port}"
-          subscriptionConnectionMinimumIdleSize: 1
-          subscriptionConnectionPoolSize: 50
-          connectionMinimumIdleSize: 24
-          connectionPoolSize: 64
-          database: ${redis.database}
-          dnsMonitoringInterval: 5000
-        threads: 16
-        nettyThreads: 32
-        codec: !<org.redisson.client.codec.StringCodec> {}
-        transportMode: "NIO"
+      config: |                          # | 表示后面的内容是完整的多行字符串
+        singleServerConfig:              # 单机模式配置
+          idleConnectionTimeout: 10000   # 空闲连接超时（毫秒）
+          connectTimeout: 10000          # 连接超时（毫秒）
+          timeout: 3000                  # 命令响应超时（毫秒）
+          retryAttempts: 3               # 命令执行失败后的重试次数
+          retryInterval: 1500            # 重试间隔（毫秒）
+          password: ${redis.password}    # Redis 密码
+          subscriptionsPerConnection: 5  # 每个连接的最大订阅数
+          clientName: null               # 客户端名称（null 表示不设置）
+          address: "redis://${redis.host}:${redis.port}"  # Redis 服务器地址
+          subscriptionConnectionMinimumIdleSize: 1        # 订阅连接最小空闲数
+          subscriptionConnectionPoolSize: 50              # 订阅连接池大小
+          connectionMinimumIdleSize: 24                   # 连接池最小空闲连接数
+          connectionPoolSize: 64                          # 连接池大小
+          database: ${redis.database}                     # Redis 数据库编号
+          dnsMonitoringInterval: 5000                     # DNS 监控间隔（毫秒）
+        threads: 16                      # 处理 Redis 事件的线程数
+        nettyThreads: 32                 # Netty 网络通信的线程数
+        codec: !<org.redisson.client.codec.StringCodec> {}  # 编解码器（String 格式）
+        transportMode: "NIO"             # 传输模式：NIO（非阻塞 IO）
 
-# MyBatis Plus配置
+
+# ============================================================
+# 三、MyBatis Plus 配置（数据库 ORM 框架）
+# ============================================================
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-    call-setters-on-nulls: true
-    jdbc-type-for-null: 'null'
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true   # 自动转换：数据库字段 user_name → Java 属性 userName
+    cache-enabled: false                 # 关闭 MyBatis 一级缓存（用 JetCache 替代）
+    call-setters-on-nulls: true          # 查询结果为 null 的字段也设置到实体中
+    jdbc-type-for-null: 'null'           # 参数为 null 时，JDBC 类型设为 NULL
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # SQL 日志输出到控制台（开发环境方便调试）
   global-config:
     db-config:
-      id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-  mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.ydzz.entity
+      id-type: auto                      # 主键生成策略：auto=数据库自增
+      logic-delete-field: deleted        # 逻辑删除字段名（删除时只改这个字段，不真删数据）
+      logic-delete-value: 1              # 已删除的值
+      logic-not-delete-value: 0          # 未删除的值
+  mapper-locations: classpath*:/mapper/**/*.xml  # MyBatis XML 映射文件的位置
+  type-aliases-package: com.ydzz.entity          # 实体类所在的包（XML 中可以直接用类名）
 
-# Sa-Token配置
+
+# ============================================================
+# 四、Sa-Token 配置（轻量级权限认证框架）
+# ============================================================
 sa-token:
-  token-name: Authorization
-  timeout: 259200
-  active-timeout: -1
-  is-concurrent: true
-  is-share: true
-  token-style: uuid
-  is-log: true
-  token-prefix: "satoken:"
-  is-read-cookie: false
-  is-read-header: true
-  is-read-body: false
+  token-name: Authorization             # Token 在请求头中的名称（前端传 Authorization: xxx）
+  timeout: 259200                       # Token 有效期（秒），259200 = 3 天，-1 表示永不过期
+  active-timeout: -1                    # Token 最低活跃频率（秒），超过则冻结。-1 表示不限制
+  is-concurrent: true                   # 是否允许同一账号多地同时登录：true=允许，false=新登录挤掉旧登录
+  is-share: true                        # 多人登录同一账号时是否共用 Token：true=共用，false=每人一个
+  token-style: uuid                     # Token 生成风格：uuid | simple-uuid | random-32/64/128 | tik
+  is-log: true                          # 是否输出操作日志（开发环境建议开启）
+  token-prefix: "satoken:"              # Token 在 Redis 中存储时的前缀
+  is-read-cookie: false                 # 是否从 Cookie 中读取 Token（关闭，只用请求头）
+  is-read-header: true                  # 是否从请求头中读取 Token（开启）
+  is-read-body: false                   # 是否从请求体中读取 Token（关闭）
 
-# JetCache配置
+
+# ============================================================
+# 五、JetCache 配置（二级缓存：本地 Caffeine + 远程 Redis）
+# ============================================================
 jetcache:
-  statIntervalMinutes: 1
-  areaInCacheName: false
-  local:
+  statIntervalMinutes: 1                # 缓存统计信息打印间隔（分钟）
+  areaInCacheName: false                # 缓存名称中是否包含 area 前缀
+  local:                                # 本地缓存配置（Caffeine，存在 JVM 堆内存中，极快）
     default:
-      type: caffeine
-      keyConvertor: fastjson2
-      expireAfterWriteInMillis: 3600000
-  remote:
+      type: caffeine                    # 本地缓存类型
+      keyConvertor: fastjson2           # Key 的序列化方式
+      expireAfterWriteInMillis: 3600000 # 写入后过期时间（毫秒），3600000 = 1 小时
+  remote:                               # 远程缓存配置（Redis，所有服务实例共享）
     default:
-      database: ${redis.database}
-      type: redisson
-      keyConvertor: fastjson2
-      valueEncoder: java
-      valueDecoder: java
-      defaultExpireInMillis: 3600000
-      keyPrefix: "jetcache:"
-      broadcastChannel: "jetcache"
-  enableMethodCache: true
-  enableCreateCacheAnnotation: true
+      database: ${redis.database}       # 使用的 Redis 数据库
+      type: redisson                    # 远程缓存类型（通过 Redisson 连接 Redis）
+      keyConvertor: fastjson2           # Key 的序列化方式
+      valueEncoder: java                # 值的编码方式（Java 序列化）
+      valueDecoder: java                # 值的解码方式
+      defaultExpireInMillis: 3600000    # 默认过期时间（毫秒），3600000 = 1 小时
+      keyPrefix: "jetcache:"            # 缓存 Key 的前缀（方便在 Redis 中识别）
+      broadcastChannel: "jetcache"      # 缓存变更广播频道（多实例时通知其他实例更新本地缓存）
+  enableMethodCache: true               # 启用 @Cached 注解的方法缓存
+  enableCreateCacheAnnotation: true     # 启用 @CreateCache 注解创建缓存实例
 
-# Swagger配置
+
+# ============================================================
+# 六、SpringDoc（Swagger 接口文档）配置
+# ============================================================
 springdoc:
-  enabled: true
+  enabled: true                         # 是否启用 Swagger（生产环境应设为 false）
   api-docs:
-    enabled: true
-    path: /v3/api-docs
+    enabled: true                       # 是否生成 API 文档 JSON
+    path: /v3/api-docs                  # API 文档 JSON 的访问路径
   swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
-    tags-sorter: alpha
-    operations-sorter: alpha
-    disable-swagger-default-url: true
-    defaultModelsExpandDepth: -1
-    defaultModelExpandDepth: -1
-    doc-expansion: none
-  packages-to-scan: com.ydzz.controller
-  paths-to-match: /**
+    enabled: true                       # 是否启用 Swagger UI 网页
+    path: /swagger-ui.html              # Swagger 网页的访问路径
+    tags-sorter: alpha                  # 接口分组按字母排序
+    operations-sorter: alpha            # 接口方法按字母排序
+    disable-swagger-default-url: true   # 禁用默认的 /swagger-ui/index.html 地址
+    defaultModelsExpandDepth: -1        # 数据模型默认展开深度，-1=不展开
+    defaultModelExpandDepth: -1         # 单个模型默认展开深度
+    doc-expansion: none                 # 接口默认展开方式：none=全部折叠，list=展开列表，full=全部展开
+  packages-to-scan: com.ydzz.controller # 扫描哪个包下的 Controller
+  paths-to-match: /**                   # 扫描哪些路径的接口
 
-# 健康检查配置
+
+# ============================================================
+# 七、系统健康检查配置
+# ============================================================
 health:
   check:
-    interval-ms: 300000  # 定时健康检查间隔（毫秒），默认 5 分钟
+    interval-ms: 300000                 # 定时健康检查间隔（毫秒），300000 = 5 分钟
 
-# 日志配置
+
+# ============================================================
+# 八、日志配置（开发环境 — 最详细，方便排查问题）
+# ============================================================
 logging:
   level:
-    com.ydzz: debug
-    org.springframework: info
-    org.mybatis: debug
+    # ------ 应用代码 ------
+    com.ydzz: debug                     # 你自己写的代码，DEBUG 级别可以看到所有细节
+
+    # ------ Spring 框架 ------
+    org.springframework: info           # Spring 框架主体，INFO 级别（启动信息、Bean 加载等）
+    org.springframework.web: debug      # Spring MVC 请求处理，DEBUG 可以看到每个请求的细节
+    org.springframework.boot: info      # Spring Boot 自动配置相关
+
+    # ------ 数据库相关 ------
+    org.mybatis: debug                  # MyBatis 执行的 SQL 语句及参数
+    org.apache.ibatis: debug            # MyBatis 底层日志（更底层，一般不需要）
+    com.baomidou.mybatisplus: debug     # MyBatis Plus 框架日志
+    org.springframework.jdbc: debug     # Spring JDBC 操作日志
+    org.springframework.transaction: debug  # 事务管理日志（事务开启、提交、回滚）
+    com.alibaba.druid: debug            # Druid 连接池日志（连接获取、归还等）
+    com.zaxxer.hikari: info             # HikariCP 日志（未启用时可忽略，改用 Druid 了）
+
+    # ------ 缓存相关 ------
+    com.alicp.jetcache: debug           # JetCache 缓存操作日志（缓存命中、加载等）
+    org.springframework.cache: debug    # Spring 缓存抽象层日志
+    com.github.benmanes.caffeine: warn  # Caffeine 本地缓存日志（太详细，用 WARN 即可）
+
+    # ------ Redis 相关 ------
+    org.redisson: info                  # Redisson 客户端日志（连接、锁操作等）
+    org.springframework.data.redis: debug  # Spring Data Redis 模板操作日志
+
+    # ------ 认证相关 ------
+    cn.dev33.satoken: debug             # Sa-Token 认证日志（登录、鉴权、Token 操作）
+
+    # ------ RocketMQ（需要时取消注释）------
+    # org.apache.rocketmq: debug
+
+    # ------ Web 容器 ------
+    org.apache.catalina: warn           # Tomcat 容器日志
+    org.apache.tomcat: warn             # Tomcat 底层日志

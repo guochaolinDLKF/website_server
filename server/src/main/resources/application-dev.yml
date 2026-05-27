@@ -1,41 +1,55 @@
-# 开发环境配置模板 — 远程开发环境用
-# 使用时修改 mysql.host 和 redis.host 为实际地址
+# ============================================================
+# 远程开发环境配置（application-dev.yml）
+# 
+# 适用场景：部署到远程开发服务器进行联调测试
+# 特点：日志适中、Swagger 开启、SQL 不打印到控制台
+# ============================================================
 
+# ---------- MySQL 连接变量 ----------
 mysql:
-  host: your_dev_host
-  port: 3306
-  database: your_database
-  username: your_username
-  password: 'your_password'
+  host: your_dev_host                   # 远程开发数据库 IP
+  port: 3306                            # 数据库端口
+  database: your_database               # 数据库名
+  username: your_username               # 用户名
+  password: 'your_password'             # 密码
 
+# ---------- Redis 连接变量 ----------
 redis:
-  host: your_dev_host
-  port: 6379
-  password: ""
-  database: 0
+  host: your_dev_host                   # 远程开发 Redis IP
+  port: 6379                            # Redis 端口
+  password: ""                          # Redis 密码（无密码则为空字符串）
+  database: 0                           # 使用的数据库编号
 
+
+# ============================================================
+# Spring 框架配置
+# ============================================================
 spring:
   application:
-    name: server
+    name: server                        # 应用名称
+
+  # ---------- 数据源 ----------
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource  # 连接池类型
+    driver-class-name: com.mysql.cj.jdbc.Driver   # 数据库驱动
     url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${mysql.username}
     password: ${mysql.password}
     druid:
-      initial-size: 10
-      min-idle: 10
-      max-active: 100
-      max-wait: 60000
-      time-between-eviction-runs-millis: 60000
-      min-evictable-idle-time-millis: 300000
-      validation-query: SELECT 1
-      test-while-idle: true
-      test-on-borrow: false
-      test-on-return: false
-      pool-prepared-statements: true
-      filters: stat,wall,slf4j
+      initial-size: 10                  # 启动时初始连接数
+      min-idle: 10                      # 最小空闲连接数
+      max-active: 100                   # 最大活跃连接数（开发服务器可适当调大）
+      max-wait: 60000                   # 获取连接最大等待时间
+      time-between-eviction-runs-millis: 60000   # 空闲连接检测间隔
+      min-evictable-idle-time-millis: 300000     # 连接最小空闲时间
+      validation-query: SELECT 1        # 连接有效性检测 SQL
+      test-while-idle: true             # 空闲时检测
+      test-on-borrow: false             # 获取时检测
+      test-on-return: false             # 归还时检测
+      pool-prepared-statements: true    # 缓存 PreparedStatement
+      filters: stat,wall,slf4j          # Druid 过滤器
+
+  # ---------- Redis（Lettuce 客户端） ----------
   data:
     redis:
       host: ${redis.host}
@@ -45,10 +59,12 @@ spring:
       timeout: 10000ms
       lettuce:
         pool:
-          max-active: 50
-          max-wait: -1ms
-          max-idle: 8
-          min-idle: 0
+          max-active: 50                # 最大连接数
+          max-wait: -1ms                # 获取连接等待时间（-1 无限）
+          max-idle: 8                   # 最大空闲连接
+          min-idle: 0                   # 最小空闲连接
+
+  # ---------- Redisson 分布式锁 ----------
   redis:
     redisson:
       config: |
@@ -56,56 +72,72 @@ spring:
           address: "redis://${redis.host}:${redis.port}"
           password: ${redis.password}
           database: ${redis.database}
-          connectionPoolSize: 64
-          connectionMinimumIdleSize: 24
-          idleConnectionTimeout: 10000
-          connectTimeout: 10000
-          timeout: 3000
+          connectionPoolSize: 64        # 连接池大小
+          connectionMinimumIdleSize: 24 # 最小空闲连接
+          idleConnectionTimeout: 10000  # 空闲超时
+          connectTimeout: 10000         # 连接超时
+          timeout: 3000                 # 响应超时
         threads: 16
         nettyThreads: 32
         codec: !<org.redisson.client.codec.StringCodec> {}
         transportMode: "NIO"
 
+
+# ============================================================
+# MyBatis Plus 配置
+# ============================================================
 mybatis-plus:
   configuration:
-    map-underscore-to-camel-case: true
-    cache-enabled: false
-  mapper-locations: classpath*:/mapper/**/*.xml
-  type-aliases-package: com.ydzz.entity
+    map-underscore-to-camel-case: true   # 下划线转驼峰
+    cache-enabled: false                 # 关闭一级缓存
+  mapper-locations: classpath*:/mapper/**/*.xml  # XML 映射文件位置
+  type-aliases-package: com.ydzz.entity          # 实体类包
 
+
+# ============================================================
+# Sa-Token 认证配置
+# ============================================================
 sa-token:
-  token-name: Authorization
-  timeout: 259200
-  active-timeout: -1
-  is-concurrent: true
-  is-share: true
-  token-style: uuid
-  is-log: true
-  token-prefix: "satoken:"
-  is-read-cookie: false
-  is-read-header: true
+  token-name: Authorization             # Token 请求头名称
+  timeout: 259200                       # 有效期（秒），3 天
+  active-timeout: -1                    # 最低活跃频率，-1 不限制
+  is-concurrent: true                   # 允许并发登录
+  is-share: true                        # 共用 Token
+  token-style: uuid                     # Token 风格
+  is-log: true                          # 输出操作日志
+  token-prefix: "satoken:"              # Redis 中 Token 前缀
+  is-read-cookie: false                 # 不从 Cookie 读
+  is-read-header: true                  # 从请求头读
 
+
+# ============================================================
+# JetCache 二级缓存配置
+# ============================================================
 jetcache:
-  statIntervalMinutes: 1
+  statIntervalMinutes: 1                # 统计间隔（分钟）
   areaInCacheName: false
-  local:
+  local:                                # 本地缓存（Caffeine）
     default:
       type: caffeine
       keyConvertor: fastjson2
-      expireAfterWriteInMillis: 3600000
-  remote:
+      expireAfterWriteInMillis: 3600000 # 1 小时过期
+  remote:                               # 远程缓存（Redis）
     default:
       database: ${redis.database}
       type: redisson
       keyConvertor: fastjson2
       valueEncoder: java
       valueDecoder: java
-      defaultExpireInMillis: 3600000
+      defaultExpireInMillis: 3600000    # 1 小时过期
       keyPrefix: "jetcache:"
-      broadcastChannel: "jetcache"
+      broadcastChannel: "jetcache"      # 缓存变更广播
 
+
+# ============================================================
+# Swagger 接口文档配置
+# ============================================================
 springdoc:
-  enabled: true
+  enabled: true                         # 开发环境开启
   api-docs:
     path: /v3/api-docs
   swagger-ui:
@@ -113,12 +145,44 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: com.ydzz.controller
 
+
+# ============================================================
 # 健康检查配置
+# ============================================================
 health:
   check:
-    interval-ms: 300000
+    interval-ms: 300000                 # 5 分钟检查一次
 
+
+# ============================================================
+# 日志配置（远程开发 — 适中，能看到关键信息但不刷屏）
+# ============================================================
 logging:
   level:
-    com.ydzz: info
-    org.springframework: warn
+    # ------ 应用代码 ------
+    com.ydzz: info                      # 应用日志，INFO 级别
+
+    # ------ Spring 框架 ------
+    org.springframework: warn           # 框架主体，WARN 以上才输出
+    org.springframework.web: info       # Web 请求处理
+    org.springframework.boot: info      # 启动信息
+
+    # ------ 数据库 ------
+    org.mybatis: info                   # SQL 执行日志
+    org.springframework.jdbc: info      # JDBC 操作
+    org.springframework.transaction: info  # 事务管理
+    com.alibaba.druid: info             # Druid 连接池
+
+    # ------ 缓存 ------
+    com.alicp.jetcache: info            # JetCache
+    org.springframework.cache: info     # Spring Cache
+
+    # ------ Redis ------
+    org.redisson: warn                  # Redisson（WARN 只输出异常情况）
+    org.springframework.data.redis: warn
+
+    # ------ 认证 ------
+    cn.dev33.satoken: info              # Sa-Token
+
+    # ------ Web 容器 ------
+    org.apache.catalina: warn           # Tomcat
