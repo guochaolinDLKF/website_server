@@ -18,4 +18,13 @@ public interface VisitInfoService extends IService<VisitInfo> {
      * @param ip 访问者 IP 地址
      */
     void recordVisit(String ip);
+
+    /**
+     * 记录一次下载行为
+     * 根据 IP 和下载平台，更新该 IP 对应记录的下载信息
+     *
+     * @param ip       访问者 IP 地址
+     * @param platform 下载平台标识（如 iOS、Android、Web 等）
+     */
+    void recordDownload(String ip, String platform);
 }

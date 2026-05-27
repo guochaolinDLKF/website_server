@@ -45,6 +45,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns(
                     "/api/user/login",
                     "/game/visit_page",
+                    "/game/down_info",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
@@ -63,6 +64,7 @@ public class WebConfig implements WebMvcConfigurer {
                     .notMatch(
                         "/api/user/login",
                         "/game/visit_page",
+                        "/game/down_info",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**",

@@ -45,4 +45,25 @@ public class GameController {
             return Result.error("记录失败: " + e.getMessage());
         }
     }
+
+    @Operation(summary = "记录下载信息", description = "根据客户端 IP 和下载平台记录下载行为，IP 默认从请求头自动解析")
+    @PostMapping("/down_info")
+    public Result<String> downInfo(
+            @Parameter(description = "访问者 IP（可选，不传则自动从请求头解析）", example = "114.114.114.114")
+            @RequestParam(value = "ip", required = false) String ip,
+            @Parameter(description = "下载平台标识", example = "iOS", required = true)
+            @RequestParam("downPlatform") String downPlatform,
+            HttpServletRequest request) {
+
+        ip = StringUtils.hasText(ip) ? ip : ClientIpUtil.getClientIp(request);
+
+        try {
+            log.info("记录下载信息 — IP: {}, 平台: {}", ip, downPlatform);
+            visitInfoService.recordDownload(ip, downPlatform);
+            return Result.success("记录成功");
+        } catch (Exception e) {
+            log.error("记录下载信息失败 — IP: {}, 平台: {}, 异常: {}", ip, downPlatform, e.getMessage(), e);
+            return Result.error("记录失败: " + e.getMessage());
+        }
+    }
 }
