@@ -44,6 +44,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                     "/api/user/login",
+                    "/game/visit_page",
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
@@ -61,6 +62,7 @@ public class WebConfig implements WebMvcConfigurer {
             SaRouter.match("/**")
                     .notMatch(
                         "/api/user/login",
+                        "/game/visit_page",
                         "/swagger-ui/**",
                         "/swagger-ui.html",
                         "/v3/api-docs/**",
