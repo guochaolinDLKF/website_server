@@ -68,7 +68,7 @@ ssh root@YOUR_SERVER
 # 5. 在服务器上构建和运行
 cd /home/docker/server
 docker build -t server:latest .
-docker run -d --name server -p 8000:8000 \
+docker run -d --name server -p 8660:8660 \
     -v /home/fortune-telling/logs:/home/fortune-telling/logs \
     --restart unless-stopped \
     -e SPRING_PROFILES_ACTIVE=prod \
@@ -81,7 +81,7 @@ docker run -d --name server -p 8000:8000 \
 |---|---|---|
 | 容器名称 | `server-{env}` | 如 `server-prod`, `server-dev` |
 | 镜像名称 | `server:{env}` | 如 `server:prod` |
-| 端口映射 | `8000:8000` | 主机端口:容器端口 |
+| 端口映射 | `8660:8660` | 主机端口:容器端口 |
 | 重启策略 | `unless-stopped` | 容器异常退出自动重启 |
 | 环境变量 | `SPRING_PROFILES_ACTIVE` | 激活的 Spring profile |
 
@@ -120,7 +120,7 @@ docker rmi server:prod        # 删除镜像
 docker logs server-prod
 
 # 检查端口是否被占用
-netstat -tlnp | grep 8000
+netstat -tlnp | grep 8660
 ```
 
 ### 2. 数据库连接失败
@@ -132,7 +132,7 @@ netstat -tlnp | grep 8000
 - 确认服务器能访问 Redis
 
 ### 4. 应用无法访问
-- 检查防火墙是否开放了 8000 端口
+- 检查防火墙是否开放了 8660 端口
 - 确认端口映射是否正确：`docker port server-prod`
 - 确认容器是否在运行：`docker ps`
 
@@ -146,6 +146,6 @@ netstat -tlnp | grep 8000
 ## 访问地址
 
 部署成功后：
-- **应用**: http://YOUR_SERVER_IP:8000
-- **Swagger 文档**: http://YOUR_SERVER_IP:8000/swagger-ui.html
-- **API 文档 JSON**: http://YOUR_SERVER_IP:8000/v3/api-docs
+- **应用**: http://YOUR_SERVER_IP:8660
+- **Swagger 文档**: http://YOUR_SERVER_IP:8660/swagger-ui.html
+- **API 文档 JSON**: http://YOUR_SERVER_IP:8660/v3/api-docs

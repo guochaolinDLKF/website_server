@@ -7,18 +7,18 @@
 
 # ---------- MySQL 连接变量 ----------
 mysql:
-  host: your_dev_host                   # 远程开发数据库 IP
-  port: 3306                            # 数据库端口
-  database: your_database               # 数据库名
-  username: your_username               # 用户名
-  password: 'your_password'             # 密码
+  host: 122.51.175.128                   # 远程开发数据库 IP（非本地，容器内 127.0.0.1 指向容器自身）
+  port: 23306                            # 宿主机映射端口（docker ps 看到的 0.0.0.0:23306->3306）
+  database: operations               # 数据库名
+  username: ydzz               # 用户名
+  password: 'yd.zzCC#$keji'             # 密码
 
 # ---------- Redis 连接变量 ----------
 redis:
-  host: your_dev_host                   # 远程开发 Redis IP
-  port: 6379                            # Redis 端口
-  password: ""                          # Redis 密码（无密码则为空字符串）
-  database: 0                           # 使用的数据库编号
+  host: 122.51.175.128                   # 远程开发 Redis IP
+  port: 26379                            # 宿主机映射端口（docker ps 看到的 0.0.0.0:26379->6379）
+  password: "ydzz.@KeJi#."                          # Redis 密码（无密码则为空字符串）
+  database: 5                           # 使用的数据库编号
 
 
 # ============================================================

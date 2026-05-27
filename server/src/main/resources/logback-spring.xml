@@ -5,7 +5,7 @@
 
     <springProperty scope="context" name="app.name" source="spring.application.name"/>
     <property name="APP_NAME" value="${app.name}"/>
-    <property name="LOG_PATH" value="/home/fortune-telling/logs"/>
+    <property name="LOG_PATH" value="/home/website_server/logs"/>
     <property name="LOG_FILE" value="${LOG_PATH}/application.log"/>
     <property name="FILE_LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"/>
 
