@@ -72,10 +72,10 @@ echo [3/8] SSH 连接正常。
 
 echo.
 echo [4/8] 正在上传文件到服务器...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/server"
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/server/
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/website_server"
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
 if %errorlevel% neq 0 ( echo [错误] jar 上传失败！ & pause & exit /b 1 )
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/server/
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
 if %errorlevel% neq 0 ( echo [错误] Dockerfile 上传失败！ & pause & exit /b 1 )
 echo [4/8] 文件上传完成。
 
@@ -86,7 +86,7 @@ echo [5/8] 旧容器已清理。
 
 echo.
 echo [6/8] 正在构建 Docker 镜像...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/server && docker build -t %IMAGE_NAME% ."
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/website_server && docker build -t %IMAGE_NAME% ."
 if %errorlevel% neq 0 ( echo [错误] Docker 镜像构建失败！ & pause & exit /b 1 )
 echo [6/8] 镜像构建完成。
 

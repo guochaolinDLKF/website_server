@@ -7,18 +7,18 @@
 
 # ---------- MySQL 连接变量 ----------
 mysql:
-  host: your_prod_host                  # 生产数据库 IP
-  port: 3306                            # 数据库端口
-  database: your_database               # 数据库名
-  username: your_username               # 用户名
-  password: 'your_password'             # 密码
+  host: 47.100.111.124                  # 生产数据库 IP
+  port: 23306                            # 数据库端口
+  database: operations               # 数据库名
+  username: ydzz               # 用户名
+  password: 'ydzz.@KeJi#.'             # 密码
 
 # ---------- Redis 连接变量 ----------
 redis:
-  host: your_prod_host                  # 生产 Redis IP
-  port: 6379                            # Redis 端口
-  password: ""                          # Redis 密码
-  database: 0                           # 数据库编号
+  host: 47.100.111.124                  # 生产 Redis IP
+  port: 26379                            # Redis 端口
+  password: "ydzz.@KeJi#."                          # Redis 密码
+  database: 5                           # 数据库编号
 
 
 # ============================================================

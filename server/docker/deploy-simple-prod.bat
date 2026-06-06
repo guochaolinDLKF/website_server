@@ -47,9 +47,9 @@ if !errorlevel! neq 0 ( echo [ERROR] SSH failed to %SERVER_USER%@%SERVER_IP% & p
 echo [3/8] OK.
 
 echo [4/8] Uploading files ...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/server"
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/server/
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/server/
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/website_server"
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
 if !errorlevel! neq 0 ( echo [ERROR] Upload failed! & pause & exit /b 1 )
 echo [4/8] OK.
 
@@ -58,7 +58,7 @@ ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "dock
 echo [5/8] OK.
 
 echo [6/8] Building image on server ...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/server && docker build -t %IMAGE_NAME% ."
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/website_server && docker build -t %IMAGE_NAME% ."
 if !errorlevel! neq 0 ( echo [ERROR] Docker build failed! & pause & exit /b 1 )
 echo [6/8] OK.
 
