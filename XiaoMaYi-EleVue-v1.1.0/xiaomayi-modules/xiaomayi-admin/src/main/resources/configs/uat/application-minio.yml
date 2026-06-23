@@ -1,0 +1,14 @@
+# minio配置
+minio:
+  # 对象存储服务URL
+  endpoint: 127.0.0.1:9000
+  # 对象存储服务KEY
+  accessKey: admin
+  # 对象存储服务秘钥
+  secretKey: admin
+  # 对象存储服务存储桶名
+  bucketName: test
+  # 过期时间
+  expire: 7200
+  # 允许上传文件后缀
+  fileExt: png,jpg,jpeg,pdf

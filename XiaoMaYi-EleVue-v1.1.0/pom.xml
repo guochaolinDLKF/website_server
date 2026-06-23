@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.3.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+
+    <!-- 项目域名 -->
+    <groupId>com.xiaomayi</groupId>
+    <!-- 项目模块名 -->
+    <artifactId>xiaomayi</artifactId>
+    <!-- 项目版本号 -->
+    <version>${revision}</version>
+    <!-- 项目打包类型：POM代表父级分模块管理 -->
+    <packaging>pom</packaging>
+    <!-- 项目名称 -->
+    <name>xiaomayi</name>
+    <!-- 项目描述 -->
+    <description>小蚂蚁云后台管理系统</description>
+
+    <!-- 模块管理 -->
+    <modules>
+        <module>xiaomayi-common</module>
+        <module>xiaomayi-visual</module>
+        <module>xiaomayi-services</module>
+        <module>xiaomayi-modules</module>
+    </modules>
+
+    <!-- 版本管理 -->
+    <properties>
+        <!-- 全局版本号(实际项目使用时可自定义) -->
+        <revision>2.0.0</revision>
+        <!-- JDK版本17 -->
+        <java.version>17</java.version>
+        <!-- 指定源代码使用的JDK版本 -->
+        <maven.compiler.source>17</maven.compiler.source>
+        <!-- 指定class文件的编译版本 -->
+        <maven.compiler.target>17</maven.compiler.target>
+        <!-- 设置编译时JDK的版本 -->
+        <maven.compiler.compilerVersion>17</maven.compiler.compilerVersion>
+        <!-- 设置编码插件版本号 -->
+        <maven.compiler.version>3.8.1</maven.compiler.version>
+        <!-- 指定字符集编码 -->
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+        <!-- flatten版本统一管理插件版本号 -->
+        <flatten-maven-plugin.version>1.6.0</flatten-maven-plugin.version>
+    </properties>
+
+    <!-- 依赖管理 -->
+    <dependencyManagement>
+        <!-- 依赖声明 -->
+        <dependencies>
+            <!-- 核心类库模块BOM导入 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-all</artifactId>
+                <version>${revision}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- 后台管理应用依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-admin</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- 前台网站应用依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-web</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- 客户端应用依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-uniapp</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- 生成器服务依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-generator</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- 定时任务服务依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-quartz</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- 系统管理服务依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-system</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <!-- CMS服务依赖模块 -->
+            <dependency>
+                <groupId>com.xiaomayi</groupId>
+                <artifactId>xiaomayi-cms</artifactId>
+                <version>${revision}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <!-- 编译打包 -->
+    <build>
+        <plugins>
+            <!-- 配置当前项目的jdk版本信息 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>${maven.compiler.version}</version>
+                <configuration>
+                    <!-- 输出编译详细细节 -->
+                    <verbose>false</verbose>
+                    <!-- 指定源代码使用的JDK版本 -->
+                    <target>${maven.compiler.target}</target>
+                    <!-- 指定class文件的编译版本 -->
+                    <source>${maven.compiler.source}</source>
+                    <!-- 指定字符集编码 -->
+                    <encoding>${maven.compiler.encoding}</encoding>
+                    <!-- 设置编译时JDK版本号 -->
+                    <compilerVersion>${maven.compiler.compilerVersion}</compilerVersion>
+                    <!-- 设置跳过 -->
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+            <!-- flatten统一管理版本号 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>${flatten-maven-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>flatten</goal>
+                        </goals>
+                        <configuration>
+                            <updatePomFile>true</updatePomFile>
+                            <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                            <pomElements>
+                                <!-- 关键配置：对所有依赖中使用的占位符进行解析和替换为具体值 -->
+                                <dependencies>resolve</dependencies>
+                            </pomElements>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <inherited>true</inherited>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <repository>
+            <id>public</id>
+            <name>aliyun nexus</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>public</id>
+            <name>aliyun nexus</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+
+</project>

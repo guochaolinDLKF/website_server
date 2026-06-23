@@ -1,0 +1,49 @@
+# knife4j的增强配置
+knife4j:
+  # 开启knife4j，无需添加@EnableKnife4j注解
+  enable: true
+  # 生产环境建议设置为 true，禁用文档
+  production: false
+#  # 确保以下路径加上了API前缀
+#  doc-api:
+#    api-prefix: /api/
+  openapi:
+    title: 小蚂蚁云在线API文档
+    description: 小蚂蚁云接口文档说明
+    email: xiaomayicloud@163.com
+    version: v1.0
+    # 文档定义配置
+    scheme: Bearer
+    # 文档访问头
+    header: Authorization
+    # 联系人
+    contact: 小蚂蚁云
+    # 网址
+    url: https://www.xiaomayicloud.com
+    license: Apache 2.0
+    license-url: https://www.xiaomayicloud.com
+    terms-of-service-url: https://www.xiaomayicloud.com
+  # 是否启用登录认证
+  basic:
+    # 开启Swagger的Basic认证功能,默认是false
+    enable: false
+    # Basic认证用户名
+    username: admin
+    # Basic认证密码
+    password: 123456
+  # 前端UI的个性化配置属性
+  setting:
+    # 显示语言中文
+    language: zh_cn
+    # 开启版本
+    enable-version: true
+    # 是否显示界面中SwaggerModel功能
+    enable-swagger-models: true
+    # 重命名SwaggerModel名称,默认
+    swagger-model-name: SwaggerModel2
+    # 是否显示界面中"文档管理"功能
+    enable-document-manage: true
+  documents:
+    - name: 文档说明
+      locations: classpath:markdown/*
+      group: default

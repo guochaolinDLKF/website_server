@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaomayi.system.mapper.TenantMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xiaomayi.system.entity.Tenant">
+        <id column="id" property="id" />
+        <result column="code" property="code" />
+        <result column="name" property="name" />
+        <result column="license" property="license" />
+        <result column="contact_user" property="contactUser" />
+        <result column="contact_mobile" property="contactMobile" />
+        <result column="contact_email" property="contactEmail" />
+        <result column="contact_address" property="contactAddress" />
+        <result column="contact_intro" property="contactIntro" />
+        <result column="contact_site" property="contactSite" />
+        <result column="contact_note" property="contactNote" />
+        <result column="expire_time" property="expireTime" />
+        <result column="number" property="number" />
+        <result column="status" property="status" />
+        <result column="create_user" property="createUser" />
+        <result column="create_time" property="createTime" />
+        <result column="update_user" property="updateUser" />
+        <result column="update_time" property="updateTime" />
+        <result column="del_flag" property="delFlag" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, code, name, license, contact_user, contact_mobile, contact_email, contact_address, contact_intro, contact_site, contact_note, expire_time, number, status, create_user, create_time, update_user, update_time, del_flag
+    </sql>
+
+</mapper>

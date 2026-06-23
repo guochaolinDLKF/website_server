@@ -1,0 +1,8 @@
+# 阿里钉钉
+dingtalk:
+  robot:
+    prefix: https://oapi.dingtalk.com/robot/send
+    access-token: 89742c23bdxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    secret:
+      secret-enabled: true
+      secret-token: SEC1cc02e7xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

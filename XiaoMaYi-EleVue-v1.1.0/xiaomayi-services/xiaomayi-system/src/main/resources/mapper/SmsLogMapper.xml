@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.xiaomayi.system.mapper.SmsLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="BaseResultMap" type="com.xiaomayi.system.entity.SmsLog">
+        <id column="id" property="id" />
+        <result column="template_id" property="templateId" />
+        <result column="number" property="number" />
+        <result column="title" property="title" />
+        <result column="receive_id" property="receiveId" />
+        <result column="receive_mobile" property="receiveMobile" />
+        <result column="receive_type" property="receiveType" />
+        <result column="param" property="param" />
+        <result column="content" property="content" />
+        <result column="biz_type" property="bizType" />
+        <result column="biz_id" property="bizId" />
+        <result column="status" property="status" />
+        <result column="send_time" property="sendTime" />
+        <result column="read_time" property="readTime" />
+        <result column="create_user" property="createUser" />
+        <result column="create_time" property="createTime" />
+        <result column="update_user" property="updateUser" />
+        <result column="update_time" property="updateTime" />
+        <result column="del_flag" property="delFlag" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="Base_Column_List">
+        id, template_id, number, title, receive_id, receive_mobile, receive_type, param, content, biz_type, biz_id, status, send_time, read_time, create_user, create_time, update_user, update_time, del_flag
+    </sql>
+
+</mapper>

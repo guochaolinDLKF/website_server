@@ -1,0 +1,12 @@
+# ES检索服务
+elasticsearch:
+  # ES服务IP
+  host: 127.0.0.1
+  # ES服务端口
+  port: 9200
+  # 登录账号
+  username: elastic
+  # 登录密码
+  password: 123456
+  # 访问地址
+  uris: localhost:9200

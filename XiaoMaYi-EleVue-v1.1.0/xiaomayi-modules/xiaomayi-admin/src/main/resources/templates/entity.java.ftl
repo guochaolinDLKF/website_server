@@ -1,0 +1,197 @@
+// +----------------------------------------------------------------------
+// | 小蚂蚁云企业级开发框架 [ 赋能开发者，助力企业发展 ]
+// +----------------------------------------------------------------------
+// | 版权所有 2020~2025 小蚂蚁云团队
+// +----------------------------------------------------------------------
+// | Licensed Apache-2.0 【小蚂蚁云】并不是自由软件，未经许可禁止去掉相关版权
+// +----------------------------------------------------------------------
+// | 官方网站: https://www.xiaomayicloud.com
+// +----------------------------------------------------------------------
+// | 软件作者: @小蚂蚁云团队 团队荣誉出品
+// +----------------------------------------------------------------------
+// | 版权和免责声明:
+// | 本团队对该软件框架产品拥有知识产权（包括但不限于商标权、专利权、著作权、商业秘密等）
+// | 均受到相关法律法规的保护，任何个人、组织和单位不得在未经本团队书面授权的情况下对所授权
+// | 软件框架产品本身申请相关的知识产权，被授权主体务必妥善保管官方所授权的软件产品源码，禁
+// | 止以任何形式对外泄露(包括但不限于分享、开源、网络平台),禁止用于任何违法、侵害他人合法
+// | 权益等恶意的行为，禁止用于任何违反我国法律法规的一切项目研发，任何个人、组织和单位用于
+// | 项目研发而产生的任何意外、疏忽、合约毁坏、诽谤、版权或知识产权侵犯及其造成的损失 (包括
+// | 但不限于直接、间接、附带或衍生的损失等)，本团队不承担任何法律责任，本软件框架禁止任何
+// | 单位、组织、个人用于任何违法、侵害他人合法利益等恶意的行为，如有发现违规、违法的犯罪行
+// | 为，本团队将无条件配合公安机关调查取证同时保留一切以法律手段起诉的权利，本软件框架只能
+// | 用于公司和个人内部的法律所允许的合法合规的软件产品研发，详细声明内容请阅读《框架免责声
+// | 明》附件；
+// +----------------------------------------------------------------------
+
+package ${package.Entity};
+
+<#list table.importPackages as pkg>
+import ${pkg};
+</#list>
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.xiaomayi.mybatis.model.TenantEntity;
+<#if springdoc>
+import io.swagger.v3.oas.annotations.media.Schema;
+<#elseif swagger>
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+</#if>
+import lombok.EqualsAndHashCode;
+<#if entityLombokModel>
+import lombok.Data;
+    <#if chainModel>
+import lombok.experimental.Accessors;
+    </#if>
+</#if>
+import org.springframework.format.annotation.DateTimeFormat;
+
+/**
+ * <p>
+ * ${table.comment!}
+ * </p>
+ *
+ * @author ${author}
+ * @since ${date}
+ */
+<#if entityLombokModel>
+@Data
+    <#if chainModel>
+@Accessors(chain = true)
+@EqualsAndHashCode(callSuper = true)
+    </#if>
+</#if>
+<#if table.convert>
+@TableName("${schemaName}${table.name}")
+</#if>
+<#if springdoc>
+@Schema(name = "${table.comment!}", description = "${table.comment!}")
+<#elseif swagger>
+@ApiModel(value = "${table.comment!}", description = "${table.comment!}")
+</#if>
+<#if superEntityClass??>
+public class ${entity} extends ${superEntityClass}<#if activeRecord><${entity}></#if> {
+<#elseif activeRecord>
+public class ${entity} extends Model<${entity}> {
+<#elseif entitySerialVersionUID>
+public class ${entity} implements Serializable {
+<#else>
+public class ${entity} extends TenantEntity {
+</#if>
+<#if entitySerialVersionUID>
+
+    private static final long serialVersionUID = 1L;
+</#if>
+<#-- ----------  BEGIN 字段循环遍历  ---------->
+<#list table.fields as field>
+<#if field.propertyName!="createUser" && field.propertyName!="createTime" && field.propertyName!="updateUser" && field.propertyName!="updateTime" && field.propertyName!="delFlag" && field.propertyName!="tenantId">
+    <#if field.keyFlag>
+        <#assign keyPropertyName="${field.propertyName}"/>
+    </#if>
+
+    <#if field.comment!?length gt 0>
+        <#if springdoc>
+    @Schema(description = "${field.comment}")
+        <#elseif swagger>
+    @ApiModelProperty("${field.comment}")
+        <#else>
+    /**
+     * ${field.comment}
+     */
+        </#if>
+    </#if>
+    <#if field.propertyType == 'LocalDateTime'>
+    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
+    @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    <#elseif field.propertyType == 'LocalDate'>
+    @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd")
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    </#if>
+    <#if field.keyFlag>
+        <#-- 主键 -->
+        <#if field.keyIdentityFlag>
+    @TableId(value = "${field.annotationColumnName}", type = IdType.AUTO)
+        <#elseif idType??>
+    @TableId(value = "${field.annotationColumnName}", type = IdType.${idType})
+        <#elseif field.convert>
+    @TableId("${field.annotationColumnName}")
+        </#if>
+        <#-- 普通字段 -->
+    <#elseif field.fill??>
+    <#-- -----   存在字段填充设置   ----->
+        <#if field.convert>
+    @TableField(value = "${field.annotationColumnName}", fill = FieldFill.${field.fill})
+        <#else>
+    @TableField(fill = FieldFill.${field.fill})
+        </#if>
+    <#elseif field.convert>
+    @TableField("${field.annotationColumnName}")
+    </#if>
+    <#-- 乐观锁注解 -->
+    <#if field.versionField>
+    @Version
+    </#if>
+    <#-- 逻辑删除注解 -->
+    <#if field.logicDeleteField>
+    @TableLogic
+    </#if>
+    private ${field.propertyType} ${field.propertyName};
+</#if>
+</#list>
+<#------------  END 字段循环遍历  ---------->
+<#if !entityLombokModel>
+    <#list table.fields as field>
+        <#if field.propertyType == "boolean">
+            <#assign getprefix="is"/>
+        <#else>
+            <#assign getprefix="get"/>
+        </#if>
+
+    public ${field.propertyType} ${getprefix}${field.capitalName}() {
+        return ${field.propertyName};
+    }
+
+    <#if chainModel>
+    public ${entity} set${field.capitalName}(${field.propertyType} ${field.propertyName}) {
+    <#else>
+    public void set${field.capitalName}(${field.propertyType} ${field.propertyName}) {
+    </#if>
+        this.${field.propertyName} = ${field.propertyName};
+        <#if chainModel>
+        return this;
+        </#if>
+    }
+    </#list>
+</#if>
+<#if entityColumnConstant>
+    <#list table.fields as field>
+
+    public static final String ${field.name?upper_case} = "${field.name}";
+    </#list>
+</#if>
+<#if activeRecord>
+
+    @Override
+    public Serializable pkVal() {
+    <#if keyPropertyName??>
+        return this.${keyPropertyName};
+    <#else>
+        return null;
+    </#if>
+    }
+</#if>
+<#if !entityLombokModel>
+
+    @Override
+    public String toString() {
+        return "${entity}{" +
+    <#list table.fields as field>
+        <#if field_index==0>
+            "${field.propertyName} = " + ${field.propertyName} +
+        <#else>
+            ", ${field.propertyName} = " + ${field.propertyName} +
+        </#if>
+    </#list>
+        "}";
+    }
+</#if>
+}

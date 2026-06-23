@@ -1,0 +1,47 @@
+<aside class="side-section right-box" style="position: static; left: auto; width: 320px">
+  <div class="whitebg tuijian">
+    <h2 class="side-title">本类推荐</h2>
+    <section class="topnews imgscale" th:if="${#lists.size(layoutItemList)} > 0">
+      <a th:href="'/detail/'+${layoutItemList[0]['typeId']}+'.html'">
+        <img th:src="${layoutItemList[0]['image']}" />
+        <span>[[${layoutItemList[0]['typeText']}]]</span>
+      </a>
+    </section>
+    <ul th:if="${#lists.size(layoutItemList)} > 1">
+      <li th:each="item,itemStat:${layoutItemList}" th:if="${itemStat.count} > 1">
+        <a th:href="'/detail/'+${item['typeId']}+'.html'"><i><img th:src="${item['image']}" /></i>
+          <p th:text="${item['typeText']}"></p>
+        </a>
+      </li>
+    </ul>
+  </div>
+  <div class="blank clear"></div>
+  <div class="whitebg paihang">
+    <h2 class="side-title">点击排行</h2>
+    <section class="topnews imgscale" th:if="${#lists.size(clickList)} > 0">
+      <a th:href="'/detail/'+${clickList[0]['id']}+'.html'"><img
+              th:src="${clickList[0]['cover']}" /><span>[[${clickList[0]['title']}]]</span></a>
+    </section>
+    <ul th:if="${not #lists.isEmpty(clickList)}">
+      <li th:each="item,itemStat:${clickList}" th:if="${itemStat.count} > 1">
+        <i></i><a th:href="'/detail/'+${item['id']}+'.html'">[[${item['title']}]]</a>
+      </li>
+    </ul>
+  </div>
+  <div class="blank clear"></div>
+  <div class="whitebg cloud">
+    <h2 class="side-title">标签云</h2>
+    <ul th:if="${not #lists.isEmpty(tagList)}">
+      <a th:each="item,itemStat:${tagList}" th:href="'/tags/'+${item['id']}+'.html'" target="_blank" th:title="${item['name']}">[[${item['name']}]]</a>
+    </ul>
+  </div>
+  <div class="ad ad-small"></div>
+  <div class="whitebg suiji">
+    <h2 class="side-title">猜你喜欢</h2>
+    <ul th:if="${not #lists.isEmpty(likeList)}">
+      <li th:each="item,itemStat:${likeList}">
+        <a th:href="'/detail/'+${item['id']}+'.html'">[[${item['title']}]]</a>
+      </li>
+    </ul>
+  </div>
+</aside>

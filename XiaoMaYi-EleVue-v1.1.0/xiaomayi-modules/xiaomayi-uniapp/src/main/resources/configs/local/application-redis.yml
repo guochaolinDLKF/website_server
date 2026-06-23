@@ -1,0 +1,142 @@
+spring:
+  data:
+    # Redis连接配置
+    redis:
+      # 服务器主机地址
+      host: 127.0.0.1
+      # 服务器端口，默认为6379
+      port: 6379
+      # 服务器缓存库索引，默认0
+      database: 0
+      # 服务器密码（默认为空）
+      password: 123456
+      # 连接超时时间（默认单位：毫秒，也可以直接写10000）
+      timeout: 10s
+      # 是否开启ssl
+      ssl.enabled: false
+      # Lettuce客户端配置
+      lettuce:
+        # 连接池配置
+        pool:
+          # 连接池中的最小空闲连接
+          min-idle: 0
+          # 连接池中的最大空闲连接
+          max-idle: 8
+          # 连接池最大连接数（使用负值表示没有限制）
+          max-active: 8
+          # 连接池最大阻塞等待时间（使用负值表示没有限制）
+          max-wait: -1ms
+
+# 缓存配置
+redisson:
+  # 缓存前缀
+  keyPrefix:
+  # 线程池数量
+  threads: 4
+  # Netty线程池数量
+  nettyThreads: 8
+  # 单节点配置
+  singleServerConfig:
+    # 客户端名称
+    clientName:
+    # 数据库索引
+    database: 0
+    # 登录密码
+    password: 123456
+    # 连接地址
+    address: "redis://127.0.0.1:6379"
+    # 连接空闲超时(毫秒)，默认10000
+    idleConnectionTimeout: 10000
+    # 连接空闲超时(毫秒)，默认10000
+    connectTimeout: 10000
+    # 命令等待超时(毫秒)，默认3000
+    timeout: 3000
+    # 命令失败重试次数
+    retryAttempts: 3
+    # 命令重试发送时间间隔(毫秒)，默认1500
+    retryInterval: 1500
+    # 单个连接最大订阅数量，默认5
+    subscriptionsPerConnection: 5
+    # 发布和订阅连接的最小空闲连接数，默认1
+    subscriptionConnectionMinimumIdleSize: 1
+    # 发布和订阅连接池大小，默认50
+    subscriptionConnectionPoolSize: 50
+    # 最小空闲连接数，默认32
+    connectionMinimumIdleSize: 32
+    # 连接池大小，默认64
+    connectionPoolSize: 64
+    # DNS监测时间间隔(毫秒)，默认5000
+    dnsMonitoringInterval: 5000
+#  # 集群节点模式
+#  clusterServersConfig:
+#    # 客户端名称
+#    clientName: null
+#    # 登录密码
+#    password: null
+#    # 连接空闲超时(毫秒)，默认10000
+#    idleConnectionTimeout: 10000
+#    pingTimeout: 1000
+#    # 连接空闲超时(毫秒)，默认10000
+#    connectTimeout: 10000
+#    # 命令等待超时(毫秒)，默认3000
+#    timeout: 3000
+#    # 命令失败重试次数
+#    retryAttempts: 3
+#    # 命令重试发送时间间隔(毫秒)，默认1500
+#    # 命令失败重试次数,如果尝试达到 retryAttempts（命令失败重试次数） 仍然不能将命令发送至某个指定的节点时，将抛出错误。
+#    # 如果尝试在此限制之内发送成功，则开始启用 timeout（命令等待超时） 计时。
+#    retryInterval: 1500
+#    # 失败从节点重连间隔时间
+#    failedSlaveReconnectionInterval: 3000
+#    # 失败从节点校验间隔时间
+#    failedSlaveCheckInterval: 60000
+#    reconnectionTimeout: 3000
+#    # 命令失败重试次数
+#    failedAttempts: 3
+#    # 单个连接最大订阅数量，默认5
+#    subscriptionsPerConnection: 5
+#    # 在使用多个Redis服务节点的环境里，可以选用以下几种负载均衡方式选择一个节点：
+#    # org.redisson.connection.balancer.WeightedRoundRobinBalancer - 权重轮询调度算法
+#    # org.redisson.connection.balancer.RoundRobinLoadBalancer - 轮询调度算法
+#    # org.redisson.connection.balancer.RandomLoadBalancer - 随机调度算法
+#    # 默认：RoundRobinLoadBalancer
+#    loadBalancer: "!<org.redisson.connection.balancer.RoundRobinLoadBalancer> { }"
+#    # 用于发布和订阅连接的最小保持连接数（长连接）。Redisson内部经常通过发布和订阅来实现许多功能。
+#    # 长期保持一定数量的发布订阅连接是必须的。默认1
+#    subscriptionConnectionMinimumIdleSize: 1
+#    # 多从节点的环境里，每个从服务节点里用于发布和订阅连接的连接池最大容量。连接池的连接数量自动弹性伸缩。默认50
+#    subscriptionConnectionPoolSize: 50
+#    slaveSubscriptionConnectionMinimumIdleSize: 1
+#    slaveSubscriptionConnectionPoolSize: 50
+#    # 多从节点的环境里，每个从服务节点里用于普通操作（非 发布和订阅）的最小保持连接数（长连接）。
+#    # 长期保持一定数量的连接有利于提高瞬时读取反映速度。默认32
+#    slaveConnectionMinimumIdleSize: 32
+#    # 多从节点的环境里，每个从服务节点里用于普通操作（非 发布和订阅）连接的连接池最大容量。连接池的连接数量自动弹性伸缩。默认64
+#    slaveConnectionPoolSize: 64
+#    # 多从节点的环境里，每个主节点的最小保持连接数（长连接）。长期保持一定数量的连接有利于提高瞬时写入反应速度。默认32
+#    masterConnectionMinimumIdleSize: 32
+#    # 多主节点的环境里，每个主节点的连接池最大容量。连接池的连接数量自动弹性伸缩。 默认64
+#    masterConnectionPoolSize: 64
+#    # 设置读取操作选择节点的模式。 可用值为：
+#    # SLAVE - 只在从服务节点里读取。 默认
+#    # MASTER - 只在主服务节点里读取。
+#    # MASTER_SLAVE - 在主从服务节点里都可以读取。
+#    readMode: "SLAVE"
+#    # 设置订阅操作选择节点的模式。可用值为：
+#    # SLAVE - 只在从服务节点里订阅。默认
+#    # MASTER - 只在主服务节点里订阅。
+#    subscriptionMode: "SLAVE"
+#    # 集群节点地址,实际使用时自定定义
+#    nodeAddresses:
+#      - "redis://127.0.0.1:6379"
+#      - "redis://127.0.0.1:6380"
+#      - "redis://127.0.0.1:6381"
+#      - "redis://127.0.0.1:6382"
+#    # 对主节点变化节点状态扫描的时间间隔。单位是毫秒。
+#    scanInterval: 1000
+#    # ping连接间隔
+#    pingConnectionInterval: 0
+#    # 是否保持连接
+#    keepAlive: false
+#    #
+#    tcpNoDelay: false

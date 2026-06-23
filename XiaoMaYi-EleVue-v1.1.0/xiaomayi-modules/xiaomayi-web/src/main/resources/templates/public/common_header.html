@@ -1,0 +1,52 @@
+<header>
+  <div class="logo-section box">
+    <div class="search">
+      <form action="/e/search/index.php" method="post" name="searchform" id="searchform">
+        <input type="hidden" name="show" value="title,newstext" />
+        <input type="hidden" name="tempid" value="1" />
+        <input name="keyboard" id="keyboard" class="input_text" value="请输入关键字词" style="color: rgb(153, 153, 153)"
+          onfocus="if(value=='请输入关键字词'){this.style.color='#000';value=''}"
+          onblur="if(value==''){this.style.color='#999';value='请输入关键字词'}" type="text" />
+        <input type="hidden" name="kwtype" value="0" />
+        <input name="Submit" class="input_submit" value="搜索" type="submit" />
+      </form>
+    </div>
+    <div class="logo">
+      <a href="/">
+        <img th:src="@{/static/images/logo.png}" />
+        <h2 class="logo-title">小蚂蚁云CMS网站</h2>
+        <p class="logo-text">赋能开发者，助力企业发展，致力于中高端企业建站</p>
+      </a>
+    </div>
+  </div>
+  <div class="clear"></div>
+  <div class="topnav">
+    <nav>
+      <ul id="starlist">
+        <li>
+          <a href="/" th:id="${index eq 'index'} ? selected : ''">网站首页</a>
+        </li>
+        <li th:class="${not #lists.isEmpty(item['children'])} ? menu : ''" th:each="item,itemStat:${categoryList}">
+          <a th:href="'/list/'+${item['id']}+'/1.html'"
+            th:id="${categoryId eq item['id']} ? selected : ''">[[${item['name']}]]</a>
+          <ul class="sub" th:if="${not #lists.isEmpty(item['children'])}">
+            <li th:each="subItem,subItemStat:${item['children']}">
+              <a th:href="'/list/'+${subItem['id']}+'/1.html'">[[${subItem['name']}]]</a>
+            </li>
+          </ul>
+          <span></span>
+        </li>
+        <li class="menu">
+          <a href="/about">关于我们</a>
+          <ul class="sub">
+            <li><a href="/about/ad" id="selected">广告合作</a></li>
+            <li><a href="/about/contacnt">联系我们</a></li>
+          </ul>
+          <span></span>
+        </li>
+      </ul>
+    </nav>
+    <h2 id="mnavh"><span class="navicon"></span></h2>
+  </div>
+</header>
+<div class="clear blank"></div>

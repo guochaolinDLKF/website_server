@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <!-- 引入头部 -->
+  <header th:replace="./public/header"></header>
+
+  <body>
+    <!-- header -->
+    <div th:replace="./public/common_header"></div>
+    <div class="clear blank"></div>
+    <article style="position: relative">
+      <div class="blogs left-box">
+        <div class="whitebg lanmu">
+          <!--<img src="/ecms017/skin/images/pic02.jpg">-->
+          <h1><a href="">[[${categoryInfo['name']}]]</a></h1>
+          <p>[[${categoryInfo['note']}]]</p>
+        </div>
+        <div class="clear blank"></div>
+        <div class="blogs-box whitebg">
+          <div class="news-title">
+            <span class="weizhi">当前位置：<a href="/index">首页</a>&nbsp;&gt;&nbsp;<a
+                th:href="'/list/'+${categoryInfo['id']}+'/1.html'">[[${categoryInfo['name']}]]</a>
+            </span>
+            <h2>列表</h2>
+          </div>
+          <div class="blogs-list">
+            <ul>
+              <li th:each="item,itemStat:${articleList}">
+                <i><a th:href="'/detail/'+${item['id']}+'.html'"><img th:src="${item['cover']}"
+                      th:alt="${item['title']}" /></a></i>
+                <h2>
+                  <a th:href="'/detail/'+${item['id']}+'.html'">
+                    [[${item['title']}]]</a>
+                </h2>
+                <p>
+                  [[${item['intro']}]]
+                </p>
+                <span class="po-date">[[${item['createTime']}]]</span>
+                <span class="po-view">[[${item['click']}]]</span>
+              </li>
+            </ul>
+          </div>
+          <div class="pagelist">
+            <!-- 首页 -->
+            <a th:href="'/list/'+${categoryId}+'/1.html'" th:if="${current gt 5}">首页</a>
+            <!-- 上一页 -->
+            <a th:href="'/list/'+${categoryId}+'/'+${current-1}+'.html'" th:if="${current gt 1}">上一页</a>
+            <!-- 页码 -->
+            <a th:each="index:${#numbers.sequence(current, pages)}" th:href="'/list/'+${categoryId}+'/'+${index}+'.html'"
+              th:if="${index} lt ${current+5}">[(${index})]</a>
+            <!-- 下一页 -->
+            <a th:href="'/list/'+${categoryId}+'/'+${current+1}+'.html'" th:if="${current+4 lt pages}">下一页</a>
+            <!-- 尾页 -->
+            <a th:href="'/list/'+${categoryId}+'/'+${pages}+'.html'" th:if="${current+5 lt pages}">尾页</a>
+          </div>
+        </div>
+      </div>
+      <!-- 引入右侧本类推荐、点击排行、标签、猜猜你喜欢等 -->
+      <div th:replace="./common/right"></div>
+    </article>
+    <div class="clear blank"></div>
+    <!-- 引入脚部 -->
+    <footer th:replace="./public/footer"></footer>
+  </body>
+
+</html>

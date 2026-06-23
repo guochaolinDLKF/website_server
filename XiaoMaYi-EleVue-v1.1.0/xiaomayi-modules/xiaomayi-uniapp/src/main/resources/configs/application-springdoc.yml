@@ -1,0 +1,24 @@
+# springdoc-openapi项目配置
+springdoc:
+  # swagger可视化配置
+  swagger-ui:
+    # 开启swagger界面，依赖OpenApi，需要OpenApi同时开启
+    enabled: true
+    # 自定义swagger前端请求路径，/swagger-ui.html会自动重定向到swagger页面
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+    # 持久化认证数据，如果设置为 true，它会保留授权数据并且不会在浏览器关闭/刷新时丢失
+    persistAuthorization: true
+    # 禁止默认路径
+    disable-swagger-default-url: true
+  api-docs:
+    # 是否开启接口文档，默认为true，配置为false则是停用
+    enabled: true
+    # swagger后端请求地址
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.xiaomayi.admin,com.xiaomayi.system,com.xiaomayi.quartz,com.xiaomayi.generator,com.xiaomayi.web,com.xiaomayi.uniapp
+  default-flat-param-object: true

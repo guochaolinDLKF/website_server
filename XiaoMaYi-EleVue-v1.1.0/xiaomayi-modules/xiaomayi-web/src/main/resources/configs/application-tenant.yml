@@ -1,0 +1,45 @@
+# 多租户配置文件
+tenant:
+  # 是否开启多租户
+  enable: true
+  # 租户字段名
+  column: tenant_id
+  # 需要进行租户ID过滤的表名集合
+  filterTables:
+  # 需要忽略的多租户的表，此配置优先filterTables，若此配置为空则启用filterTables
+  ignoreTables:
+    - tables
+    - columns
+    - pg_class
+    - pg_namespace
+    - pg_stat_user_tables
+    - tables
+    - indexes
+    - partitions
+    - allocation_units
+    - extended_properties
+    - schemas
+    - sqlite_master
+    - gen_template
+    - qrtz_blob_triggers
+    - qrtz_calendars
+    - qrtz_cron_triggers
+    - qrtz_fired_triggers
+    - qrtz_job_details
+    - qrtz_locks
+    - qrtz_paused_trigger_grps
+    - qrtz_scheduler_state
+    - qrtz_simple_triggers
+    - qrtz_simprop_triggers
+    - qrtz_triggers
+    - qrtz_job
+    - qrtz_job_log
+    - sys_city
+    - sys_menu
+    - sys_role_menu
+    - sys_user_role
+    - sys_data_source
+    - sys_tenant
+  # 需要排除租户过滤的登录用户名
+  ignoreLoginNames:
+    - demo

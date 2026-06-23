@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.xiaomayi</groupId>
+        <artifactId>xiaomayi-modules</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <!-- 项目名称 -->
+    <artifactId>xiaomayi-web</artifactId>
+    <!-- 项目打包类型：JAR包 -->
+    <packaging>jar</packaging>
+    <!-- 项目名称 -->
+    <name>xiaomayi-web</name>
+    <!-- 项目描述 -->
+    <description>小蚂蚁云前台网站应用</description>
+
+    <!-- 依赖声明 -->
+    <dependencies>
+        <!-- 核心依赖模块 -->
+        <dependency>
+            <groupId>com.xiaomayi</groupId>
+            <artifactId>xiaomayi-core</artifactId>
+        </dependency>
+        <!-- Actuator 监控管理 -->
+        <dependency>
+            <groupId>com.xiaomayi</groupId>
+            <artifactId>xiaomayi-actuator</artifactId>
+        </dependency>
+        <!-- mybatis配置模块 -->
+        <dependency>
+            <groupId>com.xiaomayi</groupId>
+            <artifactId>xiaomayi-mybatis</artifactId>
+            <exclusions>
+                <!-- 排除多租户依赖 -->
+                <exclusion>
+                    <groupId>com.xiaomayi</groupId>
+                    <artifactId>xiaomayi-tenant</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- 日志依赖模块 -->
+        <dependency>
+            <groupId>com.xiaomayi</groupId>
+            <artifactId>xiaomayi-logger</artifactId>
+        </dependency>
+        <!-- 文档依赖模块 -->
+        <dependency>
+            <groupId>com.xiaomayi</groupId>
+            <artifactId>xiaomayi-springdoc</artifactId>
+        </dependency>
+    </dependencies>
+
+    <!-- 全局编译环境变量 -->
+    <profiles>
+        <!-- 本地开发环境 -->
+        <profile>
+            <id>local</id>
+            <properties>
+                <package.environment>local</package.environment>
+            </properties>
+            <activation>
+                <!-- 设置默认开启本地环境 -->
+                <activeByDefault>true</activeByDefault>
+            </activation>
+        </profile>
+        <!-- 开发环境 -->
+        <profile>
+            <id>dev</id>
+            <properties>
+                <package.environment>dev</package.environment>
+            </properties>
+        </profile>
+        <!-- 测试环境 -->
+        <profile>
+            <id>test</id>
+            <properties>
+                <package.environment>test</package.environment>
+            </properties>
+        </profile>
+        <!-- 预发布环境 -->
+        <profile>
+            <id>uat</id>
+            <properties>
+                <package.environment>uat</package.environment>
+            </properties>
+        </profile>
+        <!-- 生产环境 -->
+        <profile>
+            <id>prod</id>
+            <properties>
+                <package.environment>prod</package.environment>
+            </properties>
+        </profile>
+    </profiles>
+
+    <build>
+        <finalName>xiaomayi-web</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/java</directory>
+                <includes>
+                    <include>**/*.*</include>
+                </includes>
+                <excludes>
+                    <exclude>**/*.java</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <targetPath>WEB-INF/classes</targetPath>
+                <includes>
+                    <include>application-${package.environment}.yml</include>
+                </includes>
+            </resource>
+        </resources>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <configuration>
+                        <finalName>${project.build.finalName}</finalName>
+                        <mainClass>com.xiaomayi.web.WebApplication</mainClass>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skipTests>true</skipTests>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
