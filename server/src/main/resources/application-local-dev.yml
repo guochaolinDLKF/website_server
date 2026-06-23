@@ -11,13 +11,22 @@
 # 切换环境时只需改这里的值，不用到处找
 # ============================================================
 
-# ---------- MySQL 数据库连接变量 ----------
+# ---------- MySQL 数据库连接变量（operations = website 后台库，主库，读写） ----------
 mysql:
   host: 127.0.0.1                       # 数据库服务器 IP 地址，本机用 127.0.0.1
   port: 3306                            # 数据库端口，MySQL 默认 3306
-  database: operations                  # 数据库名
+  database: website                  # 数据库名
   username: ydzz                        # 数据库用户名
   password: 'yd.zzCC#$keji'             # 数据库密码（含特殊字符时用单引号包裹）
+
+# ---------- MySQL 连接变量（zhouyi = APP 业务库，从库，只读）—— 待填写真实数据 ----------
+# 说明：留空不影响启动（zhouyi 数据源 lazy=true，首次使用才连接）。
+mysql-zhouyi:
+  host: 127.0.0.1                              # TODO 待填写：zhouyi 库 IP
+  port: 3306                            # TODO 待填写：端口
+  database: zhouyi                      # 数据库名
+  username: 'ydzz'                          # TODO 待填写：用户名
+  password: 'yd.zzCC#$keji'                          # TODO 待填写：密码
 
 # ---------- Redis 连接变量 ----------
 redis:
@@ -34,50 +43,41 @@ spring:
   application:
     name: server                        # 应用名称，用于日志、监控等标识
 
-  # ---------- 数据源配置（连接数据库） ----------
+  # ---------- 数据源配置（动态多数据源：operations 主库读写 + zhouyi 只读从库） ----------
+  # 说明：改为 dynamic-datasource 后，Druid 监控面板(/druid/*)与 web-stat-filter 由
+  #       druid-spring-boot-starter 自动装配提供的部分不再自动生效（本地非必需）。
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource  # 使用 Druid 连接池（比默认 HikariCP 功能更强，带监控面板）
-    driver-class-name: com.mysql.cj.jdbc.Driver   # MySQL JDBC 驱动类
-    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    # 连接 URL 参数说明：
-    #   useUnicode=true           → 使用 Unicode 编码
-    #   characterEncoding=utf8    → 字符集 UTF-8
-    #   useSSL=false              → 本地开发关闭 SSL（生产环境建议开启）
-    #   serverTimezone=Asia/Shanghai → 时区设为东八区
-    #   allowPublicKeyRetrieval=true → 允许客户端获取公钥（MySQL 8.0+ 需要）
-    username: ${mysql.username}          # 引用上方 mysql.username 变量
-    password: ${mysql.password}          # 引用上方 mysql.password 变量
-
-    # ---------- Druid 连接池详细配置 ----------
-    druid:
-      initial-size: 10                   # 启动时创建的连接数
-      min-idle: 10                       # 连接池中最少保持的空闲连接数
-      max-active: 50                     # 连接池中最大活跃连接数（并发高时可调大）
-      max-wait: 60000                    # 获取连接的最大等待时间（毫秒），超时会报错
-      time-between-eviction-runs-millis: 60000   # 检测空闲连接的间隔时间（毫秒）
-      min-evictable-idle-time-millis: 300000     # 连接在池中最小空闲时间（毫秒），超过则回收
-      validation-query: SELECT 1         # 验证连接是否有效的 SQL（MySQL 用 SELECT 1）
-      test-while-idle: true              # 空闲时检测连接有效性
-      test-on-borrow: false              # 获取连接时检测（影响性能，建议 false）
-      test-on-return: false              # 归还连接时检测（影响性能，建议 false）
-      pool-prepared-statements: true     # 缓存 PreparedStatement，提升 SQL 性能
-      max-pool-prepared-statement-per-connection-size: 20  # 每个连接最多缓存的 PreparedStatement 数量
-      filters: stat,wall,slf4j           # 启用的过滤器：stat=统计, wall=防 SQL 注入, slf4j=日志
-
-      # Druid Web 监控过滤器（统计 Web 请求的 SQL 执行情况）
-      web-stat-filter:
-        enabled: true                    # 开启 Web 统计
-        url-pattern: /*                  # 统计所有请求
-        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"  # 排除静态资源和监控页面自身
-
-      # Druid 监控面板（访问 http://localhost:8000/druid/）
-      stat-view-servlet:
-        enabled: true                    # 开启监控面板
-        url-pattern: /druid/*            # 监控面板访问路径
-        reset-enable: false              # 禁止通过页面重置统计数据
-        login-username: admin            # 监控面板登录用户名
-        login-password: admin123         # 监控面板登录密码
-        allow: 127.0.0.1                 # 只允许本机访问（安全），生产环境改为具体 IP
+    dynamic:
+      primary: operations               # 默认主库（后台自身数据读写）
+      strict: true                      # @DS 指定的数据源不存在时报错（避免误查错库）
+      druid:                            # 全局 Druid 连接池默认参数
+        initial-size: 10                # 启动时创建的连接数
+        min-idle: 10                    # 连接池中最少保持的空闲连接数
+        max-active: 50                  # 连接池中最大活跃连接数
+        max-wait: 60000                 # 获取连接的最大等待时间（毫秒）
+        time-between-eviction-runs-millis: 60000   # 检测空闲连接的间隔时间（毫秒）
+        min-evictable-idle-time-millis: 300000     # 连接在池中最小空闲时间（毫秒）
+        validation-query: SELECT 1      # 验证连接是否有效的 SQL
+        test-while-idle: true           # 空闲时检测连接有效性
+        test-on-borrow: false           # 获取连接时检测
+        test-on-return: false           # 归还连接时检测
+        pool-prepared-statements: true  # 缓存 PreparedStatement
+        max-pool-prepared-statement-per-connection-size: 20
+        filters: stat,wall,slf4j        # stat=统计, wall=防 SQL 注入, slf4j=日志
+      datasource:
+        # 主库：operations（= website 后台库）
+        operations:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql.username}
+          password: ${mysql.password}
+        # 从库：zhouyi（APP 业务库，只读）。值见上方 mysql-zhouyi 变量，留空时不连接。
+        zhouyi:
+          lazy: true                     # 延迟初始化：启动不连接，首次 @DS("zhouyi") 调用时才连接
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql-zhouyi.host}:${mysql-zhouyi.port}/${mysql-zhouyi.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql-zhouyi.username}
+          password: ${mysql-zhouyi.password}
 
   # ---------- Redis 配置（使用 Lettuce 客户端） ----------
   data:
@@ -200,7 +200,7 @@ springdoc:
     defaultModelsExpandDepth: -1        # 数据模型默认展开深度，-1=不展开
     defaultModelExpandDepth: -1         # 单个模型默认展开深度
     doc-expansion: none                 # 接口默认展开方式：none=全部折叠，list=展开列表，full=全部展开
-  packages-to-scan: com.ydzz.controller # 扫描哪个包下的 Controller
+  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller # 扫描哪个包下的 Controller
   paths-to-match: /**                   # 扫描哪些路径的接口
 
 

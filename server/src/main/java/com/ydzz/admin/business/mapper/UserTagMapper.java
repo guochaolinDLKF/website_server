@@ -1,0 +1,17 @@
+package com.ydzz.admin.business.mapper;
+
+import com.baomidou.dynamic.datasource.annotation.DS;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.ydzz.admin.business.entity.UserTag;
+import org.apache.ibatis.annotations.Mapper;
+
+/**
+ * 用户标签（zhouyi.user_tag，只读）。
+ *
+ * @author WebsiteServer
+ * @since 1.0.0
+ */
+@Mapper
+@DS("zhouyi")
+public interface UserTagMapper extends BaseMapper<UserTag> {
+}

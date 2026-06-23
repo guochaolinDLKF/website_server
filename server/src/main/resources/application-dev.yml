@@ -5,13 +5,22 @@
 # 特点：日志适中、Swagger 开启、SQL 不打印到控制台
 # ============================================================
 
-# ---------- MySQL 连接变量 ----------
+# ---------- MySQL 连接变量（operations = website 后台库，主库，读写） ----------
 mysql:
   host: 122.51.175.128                   # 远程开发数据库 IP（非本地，容器内 127.0.0.1 指向容器自身）
   port: 23306                            # 宿主机映射端口（docker ps 看到的 0.0.0.0:23306->3306）
   database: operations               # 数据库名
   username: ydzz               # 用户名
   password: 'yd.zzCC#$keji'             # 密码
+
+# ---------- MySQL 连接变量（zhouyi = APP 业务库，从库，只读）—— 待填写真实数据 ----------
+# 说明：留空不影响启动（zhouyi 数据源 lazy=true，首次使用才连接）。填写后即可读取 APP 运营数据。
+mysql-zhouyi:
+  host: ''                               # TODO 待填写：zhouyi 库 IP（如与 operations 同实例则同为 122.51.175.128）
+  port: 23306                            # TODO 待填写：端口
+  database: zhouyi                       # 数据库名
+  username: ''                           # TODO 待填写：用户名
+  password: ''                           # TODO 待填写：密码
 
 # ---------- Redis 连接变量 ----------
 redis:
@@ -28,26 +37,38 @@ spring:
   application:
     name: server                        # 应用名称
 
-  # ---------- 数据源 ----------
+  # ---------- 数据源（动态多数据源：operations 主库读写 + zhouyi 只读从库） ----------
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource  # 连接池类型
-    driver-class-name: com.mysql.cj.jdbc.Driver   # 数据库驱动
-    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${mysql.username}
-    password: ${mysql.password}
-    druid:
-      initial-size: 10                  # 启动时初始连接数
-      min-idle: 10                      # 最小空闲连接数
-      max-active: 100                   # 最大活跃连接数（开发服务器可适当调大）
-      max-wait: 60000                   # 获取连接最大等待时间
-      time-between-eviction-runs-millis: 60000   # 空闲连接检测间隔
-      min-evictable-idle-time-millis: 300000     # 连接最小空闲时间
-      validation-query: SELECT 1        # 连接有效性检测 SQL
-      test-while-idle: true             # 空闲时检测
-      test-on-borrow: false             # 获取时检测
-      test-on-return: false             # 归还时检测
-      pool-prepared-statements: true    # 缓存 PreparedStatement
-      filters: stat,wall,slf4j          # Druid 过滤器
+    dynamic:
+      primary: operations               # 默认主库（后台自身数据读写）
+      strict: true                      # 严格模式：@DS 指定的数据源不存在时报错（避免误查错库）
+      druid:                            # 全局 Druid 连接池默认参数
+        initial-size: 10                # 启动时初始连接数
+        min-idle: 10                    # 最小空闲连接数
+        max-active: 100                 # 最大活跃连接数（开发服务器可适当调大）
+        max-wait: 60000                 # 获取连接最大等待时间
+        time-between-eviction-runs-millis: 60000   # 空闲连接检测间隔
+        min-evictable-idle-time-millis: 300000     # 连接最小空闲时间
+        validation-query: SELECT 1      # 连接有效性检测 SQL
+        test-while-idle: true           # 空闲时检测
+        test-on-borrow: false           # 获取时检测
+        test-on-return: false           # 归还时检测
+        pool-prepared-statements: true  # 缓存 PreparedStatement
+        filters: stat,wall,slf4j        # Druid 过滤器
+      datasource:
+        # 主库：operations（= website 后台库，存放管理员/RBAC/日志/配置等后台数据）
+        operations:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql.username}
+          password: ${mysql.password}
+        # 从库：zhouyi（APP 业务库，只读）。值见上方 mysql-zhouyi 变量，留空时不连接。
+        zhouyi:
+          lazy: true                     # 延迟初始化：启动不连接，首次 @DS("zhouyi") 调用时才连接（便于先留空、后填写）
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql-zhouyi.host}:${mysql-zhouyi.port}/${mysql-zhouyi.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql-zhouyi.username}
+          password: ${mysql-zhouyi.password}
 
   # ---------- Redis（Lettuce 客户端） ----------
   data:
@@ -143,7 +164,7 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-  packages-to-scan: com.ydzz.controller
+  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller
 
 
 # ============================================================

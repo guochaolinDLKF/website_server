@@ -74,6 +74,13 @@
             <version>${mybatis-plus.version}</version>
         </dependency>
 
+        <!-- 动态多数据源（运营后台：operations 主库 + zhouyi 只读从库） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>dynamic-datasource-spring-boot3-starter</artifactId>
+            <version>4.3.0</version>
+        </dependency>
+
         <!-- MySQL Driver -->
         <dependency>
             <groupId>mysql</groupId>

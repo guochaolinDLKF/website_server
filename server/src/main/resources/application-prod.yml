@@ -5,13 +5,22 @@
 # 特点：日志精简、Swagger 关闭、连接池最大、只输出必要信息
 # ============================================================
 
-# ---------- MySQL 连接变量 ----------
+# ---------- MySQL 连接变量（operations = website 后台库，主库，读写） ----------
 mysql:
   host: 47.100.111.124                  # 生产数据库 IP
   port: 23306                            # 数据库端口
   database: operations               # 数据库名
   username: ydzz               # 用户名
   password: 'ydzz.@KeJi#.'             # 密码
+
+# ---------- MySQL 连接变量（zhouyi = APP 业务库，从库，只读）—— 待填写真实数据 ----------
+# 说明：留空不影响启动（zhouyi 数据源 lazy=true，首次使用才连接）。
+mysql-zhouyi:
+  host: ''                              # TODO 待填写：zhouyi 生产库 IP
+  port: 23306                           # TODO 待填写：端口
+  database: zhouyi                      # 数据库名
+  username: ''                          # TODO 待填写：用户名
+  password: ''                          # TODO 待填写：密码
 
 # ---------- Redis 连接变量 ----------
 redis:
@@ -28,20 +37,31 @@ spring:
   application:
     name: server                        # 应用名称
 
-  # ---------- 数据源 ----------
+  # ---------- 数据源（动态多数据源：operations 主库读写 + zhouyi 只读从库） ----------
   datasource:
-    type: com.alibaba.druid.pool.DruidDataSource  # 连接池类型
-    driver-class-name: com.mysql.cj.jdbc.Driver   # 数据库驱动
-    url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${mysql.username}
-    password: ${mysql.password}
-    druid:
-      initial-size: 20                  # 启动时初始连接数（生产环境适当增大）
-      min-idle: 20                      # 最小空闲连接数
-      max-active: 200                   # 最大活跃连接数（根据并发量调整）
-      max-wait: 60000                   # 获取连接最大等待时间
-      validation-query: SELECT 1        # 连接有效性检测
-      test-while-idle: true             # 空闲时检测
+    dynamic:
+      primary: operations               # 默认主库
+      strict: true                      # @DS 指定的数据源不存在时报错
+      druid:                            # 全局 Druid 连接池默认参数
+        initial-size: 20                # 启动时初始连接数（生产环境适当增大）
+        min-idle: 20                    # 最小空闲连接数
+        max-active: 200                 # 最大活跃连接数（根据并发量调整）
+        max-wait: 60000                 # 获取连接最大等待时间
+        validation-query: SELECT 1      # 连接有效性检测
+        test-while-idle: true           # 空闲时检测
+      datasource:
+        operations:
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql.host}:${mysql.port}/${mysql.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql.username}
+          password: ${mysql.password}
+        # 从库：zhouyi（APP 业务库，只读）。值见上方 mysql-zhouyi 变量，留空时不连接。
+        zhouyi:
+          lazy: true                    # 延迟初始化：启动不连接，首次使用才连接
+          driver-class-name: com.mysql.cj.jdbc.Driver
+          url: jdbc:mysql://${mysql-zhouyi.host}:${mysql-zhouyi.port}/${mysql-zhouyi.database}?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+          username: ${mysql-zhouyi.username}
+          password: ${mysql-zhouyi.password}
 
   # ---------- Redis ----------
   data:

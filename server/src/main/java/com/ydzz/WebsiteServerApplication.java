@@ -24,7 +24,7 @@ import java.sql.Connection;
  */
 @Slf4j
 @SpringBootApplication
-@MapperScan("com.ydzz.mapper")
+@MapperScan({"com.ydzz.mapper", "com.ydzz.admin.mapper", "com.ydzz.admin.business.mapper"})
 @EnableAsync
 @EnableScheduling
 public class WebsiteServerApplication {

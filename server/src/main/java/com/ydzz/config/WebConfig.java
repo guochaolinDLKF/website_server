@@ -3,6 +3,7 @@ package com.ydzz.config;
 import cn.dev33.satoken.interceptor.SaInterceptor;
 import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
+import com.ydzz.admin.config.AdminStpUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
@@ -46,6 +47,7 @@ public class WebConfig implements WebMvcConfigurer {
                     "/api/user/login",
                     "/game/visit_page",
                     "/game/down_info",
+                    "/api/admin/**",          // 后台走独立 Token 解析，不经过 C 端加密 Token 拦截器
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
@@ -87,9 +89,19 @@ public class WebConfig implements WebMvcConfigurer {
             log.debug("Sa-Token拦截器认证检查完成");
         }))
         .addPathPatterns("/**")
+        .excludePathPatterns("/api/admin/**")   // 后台路径由下方独立的后台拦截器处理
         .order(2);
 
-        log.info("Web拦截器注册完成，总计: 2个拦截器");
+        // 第三步：注册后台管理端拦截器（独立 admin 登录域 + 注解权限校验）
+        registry.addInterceptor(new SaInterceptor(handler ->
+                SaRouter.match("/api/admin/**")
+                        .notMatch("/api/admin/auth/login")
+                        .check(r -> AdminStpUtil.checkLogin())
+        ))
+        .addPathPatterns("/api/admin/**")
+        .order(3);
+
+        log.info("Web拦截器注册完成，总计: 3个拦截器（含后台管理端）");
     }
 
     @Override
