@@ -3,220 +3,226 @@
     <!-- 核心指标卡片 -->
     <el-row :gutter="16">
       <el-col v-for="card in cards" :key="card.key" :xs="12" :sm="12" :md="6" :lg="6">
-        <div class="stat-card" :style="{ background: card.bg }">
-          <div class="stat-title">{{ card.title }}</div>
-          <div class="stat-value">{{ card.value }}</div>
+        <div class="metric-card">
+          <div class="metric-title">{{ card.title }}</div>
+          <div class="metric-date">{{ card.date }}</div>
+          <div class="metric-value">
+            <span class="metric-num">{{ card.value }}</span>
+            <span v-if="card.unit" class="metric-unit">{{ card.unit }}</span>
+          </div>
+          <div v-if="card.compares && card.compares.length" class="metric-compares">
+            <div v-for="cmp in card.compares" :key="cmp.label" class="metric-cmp">
+              <span class="cmp-label">{{ cmp.label }}</span>
+              <el-tooltip :content="cmp.tip" placement="top" effect="light">
+                <span class="cmp-val" :class="cmp.trend">
+                  <span v-if="cmp.trend !== 'flat'" class="cmp-arrow">{{ cmp.trend === 'up' ? '▲' : '▼' }}</span>{{ cmp.percent }}
+                </span>
+              </el-tooltip>
+            </div>
+          </div>
         </div>
       </el-col>
     </el-row>
 
     <el-row :gutter="16" style="margin-top: 16px">
       <el-col :span="24">
-        <ActiveDataCard />
+        <RetentionCard />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <MetricTrendCard
+          title="人均在线时长(分钟)"
+          metric="duration"
+          range-text="过去30天"
+          series-name="在线时长(分钟)"
+          :days="30"
+          :value-decimals="1"
+          :show-mean-sum="true"
+        />
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <MetricTrendCard
+          title="人均启动次数"
+          metric="launch"
+          range-text="过去7天"
+          series-name="人均启动次数"
+          unit="次"
+          :days="7"
+          :value-decimals="2"
+        />
       </el-col>
     </el-row>
 
     <el-row :gutter="16" style="margin-top: 16px">
       <el-col :span="24">
-        <el-card class="page-card" shadow="never">
-          <template #header>
-            <div class="card-head">
-              <span>收入趋势</span>
-              <el-radio-group v-model="trendDays" size="small" @change="loadTrends">
-                <el-radio-button :value="7">近7天</el-radio-button>
-                <el-radio-button :value="30">近30天</el-radio-button>
-              </el-radio-group>
-            </div>
-          </template>
-          <div ref="incomeTrendRef" class="chart"></div>
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-row :gutter="16" style="margin-top: 16px">
-      <el-col :xs="24" :md="8">
-        <el-card class="page-card" shadow="never">
-          <template #header><span>商品销售排行</span></template>
-          <div ref="goodsRankRef" class="chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="8">
-        <el-card class="page-card" shadow="never">
-          <template #header><span>注册渠道分布</span></template>
-          <div ref="channelRef" class="chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="8">
-        <el-card class="page-card" shadow="never">
-          <template #header><span>权益类型分布</span></template>
-          <div ref="benefitRef" class="chart"></div>
-        </el-card>
+        <RealtimeOnlineCard />
       </el-col>
     </el-row>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import * as echarts from 'echarts'
-import {
-  getOverview,
-  getIncomeTrend,
-  getGoodsRank,
-  getChannelDist,
-  getBenefitDist
-} from '@/api/dashboard'
-import ActiveDataCard from './ActiveDataCard.vue'
+import { ref, reactive, onMounted } from 'vue'
+import { getPlayerStats } from '@/api/dashboard'
+import RetentionCard from './RetentionCard.vue'
+import MetricTrendCard from './MetricTrendCard.vue'
+import RealtimeOnlineCard from './RealtimeOnlineCard.vue'
 
-const trendDays = ref(30)
-const overview = reactive({})
+const stats = reactive({})
+
+const WEEK_CN = ['日', '一', '二', '三', '四', '五', '六']
+function fmtDay(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}(${WEEK_CN[d.getDay()]})`
+}
+
+// 整数（人/笔/次）带千分位
+function fmtInt(v) {
+  return Number(v || 0).toLocaleString('zh-CN')
+}
+// 付费金额：<1万 以「元」显示，≥1万 以「万」显示，均保留2位小数。返回 { value, unit }
+function fmtMoney(v) {
+  const n = Number(v || 0)
+  const decimal2 = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+  if (n < 10000) {
+    return { value: n.toLocaleString('zh-CN', decimal2), unit: '元' }
+  }
+  return { value: (n / 10000).toLocaleString('zh-CN', decimal2), unit: '万' }
+}
+function fmtTime(d) {
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+// 由后端有符号百分比生成对比项：负数=红色▼下跌，正数=绿色▲上涨。
+// 始终展示该项（与今日新增一致）；无可对比基数(null)时显示「—」并在 tip 中说明。
+// tip 说明对比区间：对比 {基准日} 00:00 到 {当前时刻}，下降/上升了 X%
+function compare(label, pct, baseDateLabel, endTime) {
+  if (pct === null || pct === undefined) {
+    return { label, percent: '—', trend: 'flat', tip: `对比 ${baseDateLabel} 00:00 到 ${endTime}，无可对比数据` }
+  }
+  const n = Number(pct)
+  const dir = n < 0 ? '下降' : n > 0 ? '上升' : '持平'
+  const tip = `对比 ${baseDateLabel} 00:00 到 ${endTime}，${dir}了${Math.abs(n).toFixed(2)}%`
+  return { label, percent: `${Math.abs(n).toFixed(2)}%`, trend: n < 0 ? 'down' : n > 0 ? 'up' : 'flat', tip }
+}
+function compares(metric, now) {
+  const endTime = fmtTime(now)
+  const yest = new Date(now)
+  yest.setDate(yest.getDate() - 1)
+  const weekAgo = new Date(now)
+  weekAgo.setDate(weekAgo.getDate() - 7)
+  return [
+    compare('日环比', metric?.dod, fmtDay(yest), endTime),
+    compare('周同比', metric?.wow, fmtDay(weekAgo), endTime)
+  ]
+}
 
 const cards = ref([])
 function buildCards() {
+  const today = new Date()
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  const todayLabel = fmtDay(today)
+  const monthLabel = `${fmtDay(monthStart)}至${fmtDay(today)}`
+  const todayAmt = fmtMoney(stats.todayPayAmount?.value)
+  const monthAmt = fmtMoney(stats.monthPayAmount)
+
   cards.value = [
-    { key: 'totalUsers', title: '累计用户', value: overview.totalUsers ?? 0, bg: 'linear-gradient(135deg,#5b8def,#4067e8)' },
-    { key: 'todayNewUsers', title: '今日新增', value: overview.todayNewUsers ?? 0, bg: 'linear-gradient(135deg,#36c6a0,#1aa97e)' },
-    { key: 'vipUsers', title: 'VIP 用户', value: overview.vipUsers ?? 0, bg: 'linear-gradient(135deg,#f7a35c,#f08c2e)' },
-    { key: 'paidUsers', title: '付费用户', value: overview.paidUsers ?? 0, bg: 'linear-gradient(135deg,#9b6cf0,#7a45d8)' },
-    { key: 'totalIncome', title: '累计收入(元)', value: fmtMoney(overview.totalIncome), bg: 'linear-gradient(135deg,#ef5b8d,#e83467)' },
-    { key: 'todayIncome', title: '今日收入(元)', value: fmtMoney(overview.todayIncome), bg: 'linear-gradient(135deg,#21b3c6,#1689a9)' },
-    { key: 'todayOrders', title: '今日订单', value: overview.todayOrders ?? 0, bg: 'linear-gradient(135deg,#6c8cf0,#4567d8)' },
-    { key: 'validBenefits', title: '有效权益', value: overview.validBenefits ?? 0, bg: 'linear-gradient(135deg,#67c23a,#4e9e2a)' }
+    { key: 'todayNewUsers', title: '今日新增', date: todayLabel, value: fmtInt(stats.todayNewUsers?.value), unit: '人', compares: compares(stats.todayNewUsers, today) },
+    { key: 'todayActive', title: '今日活跃', date: todayLabel, value: fmtInt(stats.todayActive?.value), unit: '人', compares: compares(stats.todayActive, today) },
+    { key: 'todayPayUsers', title: '今日付费玩家', date: todayLabel, value: fmtInt(stats.todayPayUsers?.value), unit: '人', compares: compares(stats.todayPayUsers, today) },
+    { key: 'todayPayAmount', title: '今日付费金额', date: todayLabel, value: todayAmt.value, unit: todayAmt.unit, compares: compares(stats.todayPayAmount, today) },
+    { key: 'monthNewUsers', title: '当月新增玩家', date: monthLabel, value: fmtInt(stats.monthNewUsers), unit: '人' },
+    { key: 'monthActive', title: '当月活跃玩家', date: monthLabel, value: fmtInt(stats.monthActive), unit: '人' },
+    { key: 'monthPayUsers', title: '当月付费玩家', date: monthLabel, value: fmtInt(stats.monthPayUsers), unit: '人' },
+    { key: 'monthPayAmount', title: '当月付费金额', date: monthLabel, value: monthAmt.value, unit: monthAmt.unit }
   ]
-}
-function fmtMoney(v) {
-  const n = Number(v || 0)
-  return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-const incomeTrendRef = ref()
-const goodsRankRef = ref()
-const channelRef = ref()
-const benefitRef = ref()
-const charts = []
-
-function useChart(el) {
-  const inst = echarts.init(el)
-  charts.push(inst)
-  return inst
-}
-
-let incomeChart, goodsChart, channelChart, benefitChart
-
-function lineOption(data, name, color, valueKey = 'count') {
-  return {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 40, right: 16, top: 24, bottom: 30 },
-    xAxis: { type: 'category', boundaryGap: false, data: data.map((d) => d.date) },
-    yAxis: { type: 'value' },
-    series: [
-      {
-        name,
-        type: 'line',
-        smooth: true,
-        areaStyle: { opacity: 0.15 },
-        itemStyle: { color },
-        data: data.map((d) => d[valueKey] ?? d.value ?? 0)
-      }
-    ]
-  }
-}
-
-function pieOption(data) {
-  return {
-    tooltip: { trigger: 'item' },
-    legend: { bottom: 0, type: 'scroll' },
-    series: [
-      {
-        type: 'pie',
-        radius: ['40%', '66%'],
-        center: ['50%', '46%'],
-        data: data.map((d) => ({ name: d.name ?? d.type ?? '未知', value: d.value ?? d.count ?? 0 }))
-      }
-    ]
-  }
-}
-
-function barOption(data) {
-  return {
-    tooltip: { trigger: 'axis' },
-    grid: { left: 60, right: 16, top: 16, bottom: 30 },
-    xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: data.map((d) => d.name).reverse() },
-    series: [
-      {
-        type: 'bar',
-        data: data.map((d) => d.value ?? d.count ?? 0).reverse(),
-        itemStyle: { color: '#409eff', borderRadius: [0, 4, 4, 0] }
-      }
-    ]
-  }
 }
 
 async function loadOverview() {
   try {
-    const res = await getOverview()
-    Object.assign(overview, res.data || {})
+    const res = await getPlayerStats()
+    Object.assign(stats, res.data || {})
   } catch (e) {
     /* zhouyi 未连接或无数据时静默，卡片显示 0 */
   }
   buildCards()
 }
 
-async function loadTrends() {
-  try {
-    const i = await getIncomeTrend(trendDays.value)
-    incomeChart && incomeChart.setOption(lineOption(i.data || [], '收入', '#e83467', 'amount'), true)
-  } catch (e) {
-    /* 静默 */
-  }
-}
-
-async function loadDistributions() {
-  try {
-    const [g, c, b] = await Promise.all([getGoodsRank(), getChannelDist(), getBenefitDist()])
-    goodsChart && goodsChart.setOption(barOption(g.data || []), true)
-    channelChart && channelChart.setOption(pieOption(c.data || []), true)
-    benefitChart && benefitChart.setOption(pieOption(b.data || []), true)
-  } catch (e) {
-    /* 静默 */
-  }
-}
-
-function handleResize() {
-  charts.forEach((c) => c.resize())
-}
-
-onMounted(async () => {
+onMounted(() => {
   buildCards()
-  await nextTick()
-  incomeChart = useChart(incomeTrendRef.value)
-  goodsChart = useChart(goodsRankRef.value)
-  channelChart = useChart(channelRef.value)
-  benefitChart = useChart(benefitRef.value)
-  window.addEventListener('resize', handleResize)
   loadOverview()
-  loadTrends()
-  loadDistributions()
-})
-
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
-  charts.forEach((c) => c.dispose())
 })
 </script>
 
 <style scoped>
-.chart {
-  height: 280px;
-  width: 100%;
-}
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.stat-card {
+.metric-card {
   margin-bottom: 16px;
+  padding: 18px 20px;
+  background: #fff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  min-height: 132px;
+}
+.metric-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2329;
+}
+.metric-date {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
+}
+.metric-value {
+  margin-top: 12px;
+  display: flex;
+  align-items: baseline;
+}
+.metric-num {
+  font-size: 30px;
+  font-weight: 600;
+  color: #1f2329;
+  line-height: 1;
+}
+.metric-unit {
+  margin-left: 6px;
+  font-size: 13px;
+  color: #606266;
+}
+.metric-compares {
+  margin-top: 14px;
+  display: flex;
+  gap: 28px;
+}
+.metric-cmp {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.cmp-label {
+  color: #606266;
+}
+.cmp-val {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+.cmp-val.down {
+  color: #f56c6c;
+}
+.cmp-val.up {
+  color: #67c23a;
+}
+.cmp-val.flat {
+  color: #909399;
+}
+.cmp-arrow {
+  margin-right: 2px;
+  font-size: 10px;
 }
 </style>

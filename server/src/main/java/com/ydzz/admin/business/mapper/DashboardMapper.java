@@ -35,6 +35,22 @@ public interface DashboardMapper {
     @Select("SELECT COUNT(DISTINCT user_id) FROM payments WHERE payment_status = 'SUCCESS'")
     Long countPaidUsers();
 
+    // ===================== 玩家概览卡片（区间统计：新增 / 付费玩家 / 付费金额） =====================
+
+    /** 指定区间 [start,end) 新增用户数 */
+    @Select("SELECT COUNT(*) FROM user WHERE createTime >= #{start} AND createTime < #{end}")
+    Long countNewUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 指定区间 [start,end) 成功支付的付费玩家数（去重） */
+    @Select("SELECT COUNT(DISTINCT user_id) FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end}")
+    Long countPayUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 指定区间 [start,end) 成功支付金额合计 */
+    @Select("SELECT IFNULL(SUM(payment_amount), 0) FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end}")
+    BigDecimal sumIncomeRange(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     /** 近段时间新增用户趋势（按天） */
     @Select("SELECT DATE(createTime) AS `date`, COUNT(*) AS `count` FROM user WHERE createTime >= #{start} GROUP BY DATE(createTime) ORDER BY `date`")
     List<Map<String, Object>> userTrend(@Param("start") LocalDateTime start);
@@ -79,4 +95,28 @@ public interface DashboardMapper {
     @Select("SELECT COUNT(DISTINCT creator) FROM custom_event "
             + "WHERE deleted_flag = 'N' AND create_time >= #{start} AND create_time < #{end}")
     Long activeCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    // ===================== 新增用户次日留存 =====================
+    // 口径：按注册日 D 分组，reg=当日注册用户数；retained=其中在次日(D+1)有行为事件(custom_event)的去重用户数。
+    //       creator(varchar) 存的是用户ID，与 user.id 关联。
+
+    /** 区间 [start,end) 内的行为事件流水（uid=用户ID, t=事件时间），按用户、时间升序，用于会话化统计在线时长/启动次数 */
+    @Select("SELECT creator AS uid, create_time AS t FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND creator IS NOT NULL "
+            + "AND create_time >= #{start} AND create_time < #{end} "
+            + "ORDER BY creator, create_time")
+    List<Map<String, Object>> eventStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内按注册日统计：d=注册日, reg=注册数, retained=次日留存数 */
+    @Select("SELECT DATE(u.createTime) AS d, "
+            + "COUNT(DISTINCT u.id) AS reg, "
+            + "COUNT(DISTINCT e.creator) AS retained "
+            + "FROM user u "
+            + "LEFT JOIN custom_event e "
+            + "  ON e.creator = u.id AND e.deleted_flag = 'N' "
+            + "  AND e.create_time >= DATE_ADD(DATE(u.createTime), INTERVAL 1 DAY) "
+            + "  AND e.create_time <  DATE_ADD(DATE(u.createTime), INTERVAL 2 DAY) "
+            + "WHERE u.createTime >= #{start} AND u.createTime < #{end} "
+            + "GROUP BY DATE(u.createTime) ORDER BY d")
+    List<Map<String, Object>> nextDayRetention(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

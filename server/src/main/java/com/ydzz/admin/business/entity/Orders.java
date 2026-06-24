@@ -2,6 +2,7 @@ package com.ydzz.admin.business.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -39,6 +40,10 @@ public class Orders implements Serializable {
     private String tradeType;
     private String paySource;
     private String payType;
-    private Integer isVerify;
     private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+
+    /** 删除标志：0-未删除，1-已删除（orders 表使用 delete_flag，与全局 deleted 字段不同，需单独标注） */
+    @TableLogic(value = "0", delval = "1")
+    private Integer deleteFlag;
 }
