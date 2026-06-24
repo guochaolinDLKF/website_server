@@ -33,7 +33,7 @@ redis:
   host: 127.0.0.1                       # Redis 服务器 IP 地址
   port: 6379                            # Redis 端口，默认 6379
   password: "ydzz.@KeJi#."              # Redis 密码（含 # 时必须用双引号包裹，否则 # 会被当成注释）
-  database: 0                           # 使用的 Redis 数据库编号（0-15），默认 0
+  database: 5                           # 使用的 Redis 数据库编号（0-15），默认 0
 
 
 # ============================================================
@@ -200,7 +200,7 @@ springdoc:
     defaultModelsExpandDepth: -1        # 数据模型默认展开深度，-1=不展开
     defaultModelExpandDepth: -1         # 单个模型默认展开深度
     doc-expansion: none                 # 接口默认展开方式：none=全部折叠，list=展开列表，full=全部展开
-  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller # 扫描哪个包下的 Controller
+  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller,com.ydzz.admin.business.controller # 扫描哪个包下的 Controller
   paths-to-match: /**                   # 扫描哪些路径的接口
 
 

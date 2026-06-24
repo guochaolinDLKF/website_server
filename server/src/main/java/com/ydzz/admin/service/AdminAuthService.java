@@ -1,5 +1,6 @@
 package com.ydzz.admin.service;
 
+import cn.dev33.satoken.SaManager;
 import cn.hutool.crypto.digest.BCrypt;
 import com.ydzz.admin.config.AdminStpUtil;
 import com.ydzz.admin.dto.AdminInfoVo;
@@ -72,6 +73,8 @@ public class AdminAuthService {
         AdminLoginVo vo = new AdminLoginVo();
         vo.setTokenName(AdminStpUtil.getTokenInfo().getTokenName());
         vo.setTokenValue(AdminStpUtil.getTokenValue());
+        // 若配置了 token-prefix，前端需以「前缀 + 空格 + Token」格式提交请求头，故一并下发前缀
+        vo.setTokenPrefix(SaManager.getConfig().getTokenPrefix());
         vo.setAdminInfo(buildInfo(user));
         return vo;
     }

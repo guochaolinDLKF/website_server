@@ -10,7 +10,7 @@ import java.io.Serializable;
 
 /**
  * IAP 商品（zhouyi.products，只读）。
- * 字段依据《运营后台系统策划案》3.1，以真实 zhouyi 表为准。
+ * 字段依据《运营后台系统策划案》3.1，以真实 zhouyi 表为准（仅 id/product_id/product_desc/item_type）。
  *
  * @author WebsiteServer
  * @since 1.0.0

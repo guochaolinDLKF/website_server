@@ -9,7 +9,7 @@
 mysql:
   host: 122.51.175.128                   # 远程开发数据库 IP（非本地，容器内 127.0.0.1 指向容器自身）
   port: 23306                            # 宿主机映射端口（docker ps 看到的 0.0.0.0:23306->3306）
-  database: operations               # 数据库名
+  database: website               # 数据库名
   username: ydzz               # 用户名
   password: 'yd.zzCC#$keji'             # 密码
 
@@ -164,7 +164,7 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller
+  packages-to-scan: com.ydzz.controller,com.ydzz.admin.controller,com.ydzz.admin.business.controller
 
 
 # ============================================================

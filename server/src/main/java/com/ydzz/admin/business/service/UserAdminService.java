@@ -9,12 +9,15 @@ import com.ydzz.admin.business.mapper.*;
 import com.ydzz.common.ErrorCode;
 import com.ydzz.entity.User;
 import com.ydzz.exception.BusinessException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * 用户管理服务（读 zhouyi；禁用/启用为受控写 user.status）。
@@ -22,6 +25,7 @@ import java.util.Map;
  * @author WebsiteServer
  * @since 1.0.0
  */
+@Slf4j
 @Service
 public class UserAdminService {
 
@@ -84,25 +88,47 @@ public class UserAdminService {
         }
         maskPhone(user);
 
+        // 逐段容错：zhouyi 各关联表 schema 不确定，单张表查询失败不应导致整个详情 500，
+        // 失败段返回空并记录告警，便于按真实表结构定位修正。
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("user", user);
-        data.put("eightRecords", eightRecordMapper.selectList(
-                new LambdaQueryWrapper<EightRecord>().eq(EightRecord::getUserId, userId)));
-        data.put("notes", eightCharNoteMapper.selectList(
-                new LambdaQueryWrapper<EightCharNote>().eq(EightCharNote::getUserId, userId)));
-        data.put("fortunes", fortuneRecordMapper.selectList(
-                new LambdaQueryWrapper<FortuneRecord>().eq(FortuneRecord::getUserId, userId)));
-        data.put("tags", userTagMapper.selectList(
-                new LambdaQueryWrapper<UserTag>().eq(UserTag::getUserId, userId)));
-        data.put("setting", settingMapper.selectById(userId));
-        data.put("orders", ordersMapper.selectList(
-                new LambdaQueryWrapper<Orders>().eq(Orders::getUserId, userId).orderByDesc(Orders::getCreateTime)));
-        data.put("benefits", userBenefitMapper.selectList(
-                new LambdaQueryWrapper<UserBenefit>().eq(UserBenefit::getUserId, userId)));
-        data.put("smsRecords", smsSendRecordMapper.selectList(
+        data.put("eightRecords", safeList("eight_record", () -> eightRecordMapper.selectList(
+                new LambdaQueryWrapper<EightRecord>().eq(EightRecord::getUserId, userId))));
+        data.put("notes", safeList("eight_char_note", () -> eightCharNoteMapper.selectList(
+                new LambdaQueryWrapper<EightCharNote>().eq(EightCharNote::getUserId, userId))));
+        data.put("fortunes", safeList("fortune_record", () -> fortuneRecordMapper.selectList(
+                new LambdaQueryWrapper<FortuneRecord>().eq(FortuneRecord::getUserId, userId))));
+        data.put("tags", safeList("user_tag", () -> userTagMapper.selectList(
+                new LambdaQueryWrapper<UserTag>().eq(UserTag::getUserId, userId))));
+        data.put("setting", safeOne("setting", () -> settingMapper.selectById(userId)));
+        data.put("orders", safeList("orders", () -> ordersMapper.selectList(
+                new LambdaQueryWrapper<Orders>().eq(Orders::getUserId, userId).orderByDesc(Orders::getCreateTime))));
+        data.put("benefits", safeList("user_benefits", () -> userBenefitMapper.selectList(
+                new LambdaQueryWrapper<UserBenefit>().eq(UserBenefit::getUserId, userId))));
+        data.put("smsRecords", safeList("sms_send_record", () -> smsSendRecordMapper.selectList(
                 new LambdaQueryWrapper<SmsSendRecord>().eq(SmsSendRecord::getUserId, userId)
-                        .orderByDesc(SmsSendRecord::getSendTime)));
+                        .orderByDesc(SmsSendRecord::getSendTime))));
         return data;
+    }
+
+    /** 容错执行列表查询，失败返回空列表并记录告警 */
+    private <T> List<T> safeList(String table, Supplier<List<T>> query) {
+        try {
+            return query.get();
+        } catch (Exception e) {
+            log.warn("[用户详情] 查询 {} 失败（已忽略该段）：{}", table, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    /** 容错执行单条查询，失败返回 null 并记录告警 */
+    private <T> T safeOne(String table, Supplier<T> query) {
+        try {
+            return query.get();
+        } catch (Exception e) {
+            log.warn("[用户详情] 查询 {} 失败（已忽略该段）：{}", table, e.getMessage());
+            return null;
+        }
     }
 
     /** 启用/禁用用户（受控写：仅更新 zhouyi.user.status，不删除、不改其他字段） */

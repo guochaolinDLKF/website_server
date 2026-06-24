@@ -301,4 +301,84 @@
             </plugin>
         </plugins>
     </build>
+
+    <!-- ============================================================
+         可选 Profile：with-frontend
+         作用：构建 admin-web（Vue）并将产物打包进本 jar 的 static/admin/，
+              实现「单 jar、单端口」同时提供后台页面与接口。
+         用法：mvn clean package -Pwith-frontend
+              默认构建（不带该 Profile）仍只打后端，保持原有构建/部署不变。
+         前置：构建机可访问 npm 源；frontend-maven-plugin 会按操作系统下载对应 Node。
+         ============================================================ -->
+    <profiles>
+        <profile>
+            <id>with-frontend</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.15.0</version>
+                        <configuration>
+                            <workingDirectory>../admin-web</workingDirectory>
+                            <installDirectory>${project.build.directory}/node</installDirectory>
+                            <nodeVersion>v20.18.0</nodeVersion>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-node-and-npm</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                            </execution>
+                            <execution>
+                                <id>npm-install</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>install --no-audit --no-fund</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-build</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>copy-admin-web-dist</id>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <phase>process-resources</phase>
+                                <configuration>
+                                    <outputDirectory>${project.build.outputDirectory}/static/admin</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>../admin-web/dist</directory>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project> 

@@ -48,6 +48,7 @@ public class WebConfig implements WebMvcConfigurer {
                     "/game/visit_page",
                     "/game/down_info",
                     "/api/admin/**",          // 后台走独立 Token 解析，不经过 C 端加密 Token 拦截器
+                    "/admin", "/admin/**",    // 后台前端 SPA 静态资源/路由（无需 C 端登录）
                     "/swagger-ui/**",
                     "/swagger-ui.html",
                     "/v3/api-docs/**",
@@ -89,7 +90,7 @@ public class WebConfig implements WebMvcConfigurer {
             log.debug("Sa-Token拦截器认证检查完成");
         }))
         .addPathPatterns("/**")
-        .excludePathPatterns("/api/admin/**")   // 后台路径由下方独立的后台拦截器处理
+        .excludePathPatterns("/api/admin/**", "/admin", "/admin/**")   // 后台接口由下方独立拦截器处理；/admin/** 为前端静态资源放行
         .order(2);
 
         // 第三步：注册后台管理端拦截器（独立 admin 登录域 + 注解权限校验）

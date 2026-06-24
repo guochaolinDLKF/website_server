@@ -146,15 +146,15 @@ INSERT IGNORE INTO `admin_role` (`id`,`role_code`,`role_name`,`description`,`sor
  (2,'OPERATOR','运营','运营人员，内容/功能/活动编辑，数据查看',2),
  (3,'SERVICE','客服','用户查看与禁用，订单查看',3),
  (4,'FINANCE','财务','订单/退款/收入相关',4),
- (5,'ANALYST','数据分析','数据分析查看',5);
+ (5,'ANALYST','数据分析','数据分析查看',5),
+ (6,'ADMIN','管理员','系统管理员，可管理商品等业务数据（仅次于超级管理员）',6);
 
 -- 权限/菜单树
 INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,`permission_type`,`parent_id`,`path`,`icon`,`sort_order`) VALUES
  -- 一级菜单
- (1 ,'dashboard:view','数据驾驶舱',1,0 ,'/dashboard','DataLine',1),
+ (1 ,'dashboard:view','主控制台',1,0 ,'/dashboard','DataLine',1),
  (10,'user:menu'      ,'用户中心'  ,1,0 ,'/user','User',2),
  (20,'order:menu'     ,'会员与订单',1,0 ,'/order','Goods',3),
- (30,'content:menu'   ,'内容运营'  ,1,0 ,'/content','Picture',4),
  (35,'analytics:menu' ,'数据分析'  ,1,0 ,'/analytics','TrendCharts',5),
  (40,'system:menu'    ,'系统管理'  ,1,0 ,'/system','Setting',6),
  -- 用户中心
@@ -169,12 +169,8 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  (24,'order:export','导出',2,21,'','',3),
  (25,'goods:list'  ,'商品管理',1,20,'/order/goods','',2),
  (26,'goods:edit'  ,'编辑商品',2,25,'','',1),
- (27,'func:config' ,'功能配置',1,20,'/order/func-config','',3),
  (28,'benefit:list','权益管理',1,20,'/order/benefit','',4),
  (29,'payfail:list','支付异常监控',1,20,'/order/payment-failure','',5),
- -- 内容运营
- (31,'banner:list','Banner管理',1,30,'/content/banner','',1),
- (32,'notice:list','文案/公告',1,30,'/content/notice','',2),
  -- 数据分析
  (36,'analytics:user'  ,'用户分析',1,35,'/analytics/user','',1),
  (37,'analytics:income','收入分析',1,35,'/analytics/income','',2),
@@ -193,5 +189,18 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
 -- 超级管理员拥有全部权限
 INSERT IGNORE INTO `admin_role_permission` (`role_id`,`permission_id`)
 SELECT 1, id FROM `admin_permission`;
+
+-- 管理员(ADMIN)：预置驾驶舱 + 会员与订单菜单 + 商品查看/编辑权限，使其开箱即可管理商品。
+-- （商品增删改的最终校验在后端按角色 SUPER_ADMIN/ADMIN 强制限定，与此处菜单权限相互独立。）
+INSERT IGNORE INTO `admin_role_permission` (`role_id`,`permission_id`)
+SELECT 6, id FROM `admin_permission`
+ WHERE `permission_code` IN ('dashboard:view','order:menu','goods:list','goods:edit');
+
+-- 清理：移除已下线的「功能配置」「内容运营/Banner/公告」菜单及其授权（对历史库幂等生效）。
+DELETE FROM `admin_role_permission`
+ WHERE `permission_id` IN (SELECT id FROM (SELECT id FROM `admin_permission`
+   WHERE `permission_code` IN ('func:config','content:menu','banner:list','notice:list')) t);
+DELETE FROM `admin_permission`
+ WHERE `permission_code` IN ('func:config','content:menu','banner:list','notice:list');
 
 -- 其余角色的权限可在「角色管理」中按需分配（此处不预置，避免与运营实际策略冲突）。

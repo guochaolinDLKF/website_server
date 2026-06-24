@@ -2,12 +2,17 @@ package com.ydzz.admin.config;
 
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ydzz.admin.entity.AdminPermission;
 import com.ydzz.admin.entity.AdminRole;
 import com.ydzz.admin.entity.AdminUser;
 import com.ydzz.admin.entity.AdminUserRole;
+import com.ydzz.admin.mapper.AdminPermissionMapper;
 import com.ydzz.admin.mapper.AdminRoleMapper;
+import com.ydzz.admin.mapper.AdminRolePermissionMapper;
 import com.ydzz.admin.mapper.AdminUserMapper;
 import com.ydzz.admin.mapper.AdminUserRoleMapper;
+
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -33,19 +38,30 @@ public class AdminDataInitializer implements ApplicationRunner {
     private static final String DEFAULT_PASSWORD = "Admin@123";
     private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
+    /** 已下线、需在启动时清理的权限码（移除对应菜单及其角色授权） */
+    private static final List<String> RETIRED_PERMISSION_CODES =
+            List.of("func:config", "content:menu", "banner:list", "notice:list");
+
     private final AdminUserMapper adminUserMapper;
     private final AdminRoleMapper adminRoleMapper;
     private final AdminUserRoleMapper adminUserRoleMapper;
+    private final AdminPermissionMapper adminPermissionMapper;
+    private final AdminRolePermissionMapper adminRolePermissionMapper;
 
     public AdminDataInitializer(AdminUserMapper adminUserMapper, AdminRoleMapper adminRoleMapper,
-                                AdminUserRoleMapper adminUserRoleMapper) {
+                                AdminUserRoleMapper adminUserRoleMapper, AdminPermissionMapper adminPermissionMapper,
+                                AdminRolePermissionMapper adminRolePermissionMapper) {
         this.adminUserMapper = adminUserMapper;
         this.adminRoleMapper = adminRoleMapper;
         this.adminUserRoleMapper = adminUserRoleMapper;
+        this.adminPermissionMapper = adminPermissionMapper;
+        this.adminRolePermissionMapper = adminRolePermissionMapper;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        cleanRetiredPermissions();
+        ensurePermissionNames();
         try {
             LambdaQueryWrapper<AdminUser> qw = new LambdaQueryWrapper<>();
             qw.eq(AdminUser::getUsername, DEFAULT_USERNAME);
@@ -82,6 +98,48 @@ public class AdminDataInitializer implements ApplicationRunner {
             log.info("========================================");
         } catch (Exception e) {
             log.warn("[后台初始化] 跳过（后台表可能尚未建立，请先执行 sql/admin_init.sql）：{}", e.getMessage());
+        }
+    }
+
+    /**
+     * 启动时校正菜单显示名（幂等）：如「数据驾驶舱」更名为「主控制台」。
+     */
+    private void ensurePermissionNames() {
+        renamePermission("dashboard:view", "主控制台");
+    }
+
+    private void renamePermission(String code, String newName) {
+        try {
+            AdminPermission perm = adminPermissionMapper.selectOne(
+                    new LambdaQueryWrapper<AdminPermission>().eq(AdminPermission::getPermissionCode, code));
+            if (perm != null && !newName.equals(perm.getPermissionName())) {
+                AdminPermission update = new AdminPermission();
+                update.setId(perm.getId());
+                update.setPermissionName(newName);
+                adminPermissionMapper.updateById(update);
+                log.info("[后台初始化] 菜单更名：{} -> {}", code, newName);
+            }
+        } catch (Exception e) {
+            log.warn("[后台初始化] 菜单更名跳过（{}）：{}", code, e.getMessage());
+        }
+    }
+
+    /**
+     * 启动时清理已下线的菜单/权限（幂等）：删除权限本身及其角色授权，使下线的菜单不再出现。
+     */
+    private void cleanRetiredPermissions() {
+        try {
+            List<AdminPermission> retired = adminPermissionMapper.selectList(
+                    new LambdaQueryWrapper<AdminPermission>().in(AdminPermission::getPermissionCode, RETIRED_PERMISSION_CODES));
+            for (AdminPermission perm : retired) {
+                adminRolePermissionMapper.delete(
+                        new LambdaQueryWrapper<com.ydzz.admin.entity.AdminRolePermission>()
+                                .eq(com.ydzz.admin.entity.AdminRolePermission::getPermissionId, perm.getId()));
+                adminPermissionMapper.deleteById(perm.getId());
+                log.info("[后台初始化] 已移除下线菜单：{}({})", perm.getPermissionName(), perm.getPermissionCode());
+            }
+        } catch (Exception e) {
+            log.warn("[后台初始化] 清理下线菜单跳过：{}", e.getMessage());
         }
     }
 }
