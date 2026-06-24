@@ -104,6 +104,83 @@ public class DashboardService {
         return dashboardMapper.benefitTypeDist();
     }
 
+    /**
+     * 活跃数据（短信登录活跃）。
+     *
+     * @param type hour=今日每小时；week=过去7天（按天）；month=本月（按天）
+     * @return points[{label,value}] + 汇总（latest/mean/sum/dod 日环比/wow 周同比）
+     */
+    public Map<String, Object> activeData(String type) {
+        LocalDate today = LocalDate.now();
+        List<Map<String, Object>> points = new java.util.ArrayList<>();
+        boolean daily = !"hour".equalsIgnoreCase(type);
+
+        if ("hour".equalsIgnoreCase(type)) {
+            // 今日每小时（0 点至当前小时）
+            LocalDateTime start = today.atStartOfDay();
+            LocalDateTime end = today.plusDays(1).atStartOfDay();
+            Map<Integer, Long> m = new LinkedHashMap<>();
+            for (Map<String, Object> row : dashboardMapper.activeByHour(start, end)) {
+                m.put(((Number) row.get("k")).intValue(), ((Number) row.get("v")).longValue());
+            }
+            int curHour = java.time.LocalTime.now().getHour();
+            for (int h = 0; h <= curHour; h++) {
+                points.add(point(String.format("%02d:00", h), m.getOrDefault(h, 0L)));
+            }
+        } else {
+            // week=近7天；month=本月1号至今
+            LocalDate startDate = "month".equalsIgnoreCase(type) ? today.withDayOfMonth(1) : today.minusDays(6);
+            LocalDateTime start = startDate.atStartOfDay();
+            LocalDateTime end = today.plusDays(1).atStartOfDay();
+            Map<String, Long> m = new LinkedHashMap<>();
+            for (Map<String, Object> row : dashboardMapper.activeByDay(start, end)) {
+                m.put(String.valueOf(row.get("k")).substring(0, 10), ((Number) row.get("v")).longValue());
+            }
+            for (LocalDate d = startDate; !d.isAfter(today); d = d.plusDays(1)) {
+                String key = d.toString();
+                points.add(point(key.substring(5).replace('-', '/'), m.getOrDefault(key, 0L)));
+            }
+        }
+
+        long latest = points.isEmpty() ? 0L : ((Number) points.get(points.size() - 1).get("value")).longValue();
+        long prev = points.size() < 2 ? 0L : ((Number) points.get(points.size() - 2).get("value")).longValue();
+        long total = points.stream().mapToLong(p -> ((Number) p.get("value")).longValue()).sum();
+        double mean = points.isEmpty() ? 0d : (double) total / points.size();
+
+        // 周同比：仅日维度可比——最新当天 vs 7 天前同日
+        BigDecimal wow = null;
+        if (daily) {
+            LocalDate lastSevenStart = today.minusDays(7);
+            long base7 = nullSafe(dashboardMapper.activeCount(lastSevenStart.atStartOfDay(), lastSevenStart.plusDays(1).atStartOfDay()));
+            wow = pct(latest, base7);
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("points", points);
+        data.put("latest", latest);
+        data.put("latestLabel", points.isEmpty() ? "" : points.get(points.size() - 1).get("label"));
+        data.put("mean", BigDecimal.valueOf(mean).setScale(2, RoundingMode.HALF_UP));
+        data.put("sum", total);
+        data.put("dod", pct(latest, prev));   // 环比（相邻点）
+        data.put("wow", wow);                  // 周同比（仅 week/month）
+        return data;
+    }
+
+    private Map<String, Object> point(String label, long value) {
+        Map<String, Object> p = new LinkedHashMap<>();
+        p.put("label", label);
+        p.put("value", value);
+        return p;
+    }
+
+    /** 变化率百分比（(cur-base)/base*100，保留2位）；base<=0 返回 null */
+    private BigDecimal pct(long cur, long base) {
+        if (base <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf((cur - base) * 100.0 / base).setScale(2, RoundingMode.HALF_UP);
+    }
+
     private LocalDateTime startOf(int days) {
         int d = days <= 0 ? 30 : days;
         return LocalDate.now().minusDays(d - 1L).atStartOfDay();

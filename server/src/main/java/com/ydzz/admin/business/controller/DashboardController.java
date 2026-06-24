@@ -47,6 +47,13 @@ public class DashboardController {
         return Result.success(dashboardService.userTrend(days));
     }
 
+    @Operation(summary = "活跃数据（hour=今日每小时/week=过去7天/month=本月）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/active")
+    public Result<Map<String, Object>> active(@RequestParam(defaultValue = "week") String type) {
+        return Result.success(dashboardService.activeData(type));
+    }
+
     @Operation(summary = "收入趋势")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/income-trend")

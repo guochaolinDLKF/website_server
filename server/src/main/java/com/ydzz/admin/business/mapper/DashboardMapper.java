@@ -58,4 +58,25 @@ public interface DashboardMapper {
     /** 有效权益类型分布 */
     @Select("SELECT item_type AS type, COUNT(*) AS cnt FROM user_benefits WHERE is_valid = 1 GROUP BY item_type")
     List<Map<String, Object>> benefitTypeDist();
+
+    // ===================== 活跃数据（用户行为活跃：custom_event.create_time 去重 creator(=用户ID)） =====================
+    // 说明：custom_event 为用户行为事件流水（user_pai_pan 排盘 / user_login 登录等），
+    //       creator 即用户ID，create_time 为事件发生时间，deleted_flag='N' 为有效记录。
+
+    /** 指定区间内按小时去重活跃用户数（k=小时0-23, v=活跃数） */
+    @Select("SELECT HOUR(create_time) AS k, COUNT(DISTINCT creator) AS v FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND create_time >= #{start} AND create_time < #{end} "
+            + "GROUP BY HOUR(create_time) ORDER BY k")
+    List<Map<String, Object>> activeByHour(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 指定区间内按天去重活跃用户数（k=日期, v=活跃数） */
+    @Select("SELECT DATE(create_time) AS k, COUNT(DISTINCT creator) AS v FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND create_time >= #{start} AND create_time < #{end} "
+            + "GROUP BY DATE(create_time) ORDER BY k")
+    List<Map<String, Object>> activeByDay(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 指定区间内去重活跃用户总数 */
+    @Select("SELECT COUNT(DISTINCT creator) FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND create_time >= #{start} AND create_time < #{end}")
+    Long activeCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

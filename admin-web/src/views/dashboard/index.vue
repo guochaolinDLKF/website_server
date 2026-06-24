@@ -11,23 +11,23 @@
     </el-row>
 
     <el-row :gutter="16" style="margin-top: 16px">
-      <el-col :xs="24" :md="12">
+      <el-col :span="24">
+        <ActiveDataCard />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :span="24">
         <el-card class="page-card" shadow="never">
           <template #header>
             <div class="card-head">
-              <span>新增用户趋势</span>
+              <span>收入趋势</span>
               <el-radio-group v-model="trendDays" size="small" @change="loadTrends">
                 <el-radio-button :value="7">近7天</el-radio-button>
                 <el-radio-button :value="30">近30天</el-radio-button>
               </el-radio-group>
             </div>
           </template>
-          <div ref="userTrendRef" class="chart"></div>
-        </el-card>
-      </el-col>
-      <el-col :xs="24" :md="12">
-        <el-card class="page-card" shadow="never">
-          <template #header><span>收入趋势</span></template>
           <div ref="incomeTrendRef" class="chart"></div>
         </el-card>
       </el-col>
@@ -61,12 +61,12 @@ import { ref, reactive, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import {
   getOverview,
-  getUserTrend,
   getIncomeTrend,
   getGoodsRank,
   getChannelDist,
   getBenefitDist
 } from '@/api/dashboard'
+import ActiveDataCard from './ActiveDataCard.vue'
 
 const trendDays = ref(30)
 const overview = reactive({})
@@ -89,7 +89,6 @@ function fmtMoney(v) {
   return n.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-const userTrendRef = ref()
 const incomeTrendRef = ref()
 const goodsRankRef = ref()
 const channelRef = ref()
@@ -102,7 +101,7 @@ function useChart(el) {
   return inst
 }
 
-let userChart, incomeChart, goodsChart, channelChart, benefitChart
+let incomeChart, goodsChart, channelChart, benefitChart
 
 function lineOption(data, name, color, valueKey = 'count') {
   return {
@@ -166,8 +165,7 @@ async function loadOverview() {
 
 async function loadTrends() {
   try {
-    const [u, i] = await Promise.all([getUserTrend(trendDays.value), getIncomeTrend(trendDays.value)])
-    userChart && userChart.setOption(lineOption(u.data || [], '新增用户', '#409eff', 'count'), true)
+    const i = await getIncomeTrend(trendDays.value)
     incomeChart && incomeChart.setOption(lineOption(i.data || [], '收入', '#e83467', 'amount'), true)
   } catch (e) {
     /* 静默 */
@@ -192,7 +190,6 @@ function handleResize() {
 onMounted(async () => {
   buildCards()
   await nextTick()
-  userChart = useChart(userTrendRef.value)
   incomeChart = useChart(incomeTrendRef.value)
   goodsChart = useChart(goodsRankRef.value)
   channelChart = useChart(channelRef.value)
