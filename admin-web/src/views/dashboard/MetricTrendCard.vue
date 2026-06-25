@@ -9,8 +9,6 @@
       <span class="mt-tab">按天</span>
       <span class="mt-sep">|</span>
       <span class="mt-tab active">{{ rangeText }}</span>
-      <span class="mt-sep">|</span>
-      <span class="mt-tab">VS</span>
     </div>
 
     <div class="mt-body" v-loading="loading">

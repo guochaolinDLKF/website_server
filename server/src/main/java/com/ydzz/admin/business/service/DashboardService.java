@@ -329,13 +329,40 @@ public class DashboardService {
      * @param days 最近多少个完整自然日（默认 30）
      */
     public Map<String, Object> onlineStats(int days) {
-        LocalDate end = LocalDate.now().minusDays(1);     // 昨日：最后一个完整自然日
-        LocalDate start = end.minusDays((days <= 0 ? 30 : days) - 1L);
-        return onlineStats(start, end);
+        return onlineStats(days, "day");
     }
 
-    /** 人均在线时长 / 人均启动次数（指定自然日区间 [start,end]）。 */
+    /**
+     * 人均在线时长 / 人均启动次数（最近 N 天窗口，按 dim 聚合）。
+     *
+     * <p>未指定区间时按 dim 取默认窗口：day=最近 days 天、week=近 12 周、month=近 12 个月，
+     * 与「日均在线人数趋势」保持一致。</p>
+     */
+    public Map<String, Object> onlineStats(int days, String dim) {
+        LocalDate end = LocalDate.now().minusDays(1);     // 昨日：最后一个完整自然日
+        LocalDate start;
+        if ("week".equalsIgnoreCase(dim)) {
+            start = mondayOf(end).minusWeeks(11);
+        } else if ("month".equalsIgnoreCase(dim)) {
+            start = end.withDayOfMonth(1).minusMonths(11);
+        } else {
+            start = end.minusDays((days <= 0 ? 30 : days) - 1L);
+        }
+        return onlineStats(start, end, dim);
+    }
+
+    /** 人均在线时长 / 人均启动次数（指定自然日区间 [start,end]，按天聚合）。 */
     public Map<String, Object> onlineStats(LocalDate start, LocalDate end) {
+        return onlineStats(start, end, "day");
+    }
+
+    /**
+     * 人均在线时长 / 人均启动次数（指定区间 [start,end]，dim=day/week/month）。
+     *
+     * <p>始终先算每日人均值，再按 dim 聚合到周期（周期值=周期内各日人均值的平均）。
+     * 仅 day 维度提供「日环比/周同比」（按天对比口径），week/month 维度该两项为 null。</p>
+     */
+    public Map<String, Object> onlineStats(LocalDate start, LocalDate end, String dim) {
         LocalDate maxDay = LocalDate.now().minusDays(1);
         if (end == null || end.isAfter(maxDay)) {
             end = maxDay;
@@ -401,8 +428,8 @@ public class DashboardService {
         }
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("duration", buildDailySeries(durMap, start, end));
-        data.put("launch", buildDailySeries(lauMap, start, end));
+        data.put("duration", buildSeries(durMap, start, end, dim));
+        data.put("launch", buildSeries(lauMap, start, end, dim));
         return data;
     }
 

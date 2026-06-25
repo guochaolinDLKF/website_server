@@ -31,8 +31,6 @@
       <span class="ro-sep">|</span>
       <!-- 日期范围面板 -->
       <DateRangePanel default-preset="today" @change="onRange" />
-      <span class="ro-sep">|</span>
-      <span class="ro-tab">VS</span>
     </div>
 
     <div class="ro-body" v-loading="loading">
@@ -216,11 +214,19 @@ function pickDim(d) {
   load()
 }
 
-// 单日曲线模式：取区间结束日作为统计日；趋势模式：用区间作为时间范围
+// 单日：取该日作为统计日，展示日内曲线；跨多天：自动切到「按天」趋势，逐日展示所选区间数据
 function onRange({ start, end }) {
   rangeStart.value = start || ''
   rangeEnd.value = end || ''
-  targetDate.value = end || ''
+  if (start && end && start !== end) {
+    // 选择了超过 1 天的区间：按天展示区间内每天的数据（已选按周/按月则保留）
+    mode.value = 'trend'
+    if (dim.value !== 'week' && dim.value !== 'month') dim.value = 'day'
+  } else {
+    // 单日：回到日内曲线（今日 + 昨日）
+    mode.value = 'intraday'
+    targetDate.value = end || ''
+  }
   load()
 }
 

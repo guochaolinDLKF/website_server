@@ -33,14 +33,8 @@
         <el-tab-pane :label="`八字记录(${counts.eightRecords})`" name="eightRecords">
           <GenericTable :rows="data.eightRecords" />
         </el-tab-pane>
-        <el-tab-pane :label="`运势记录(${counts.fortunes})`" name="fortunes">
-          <GenericTable :rows="data.fortunes" />
-        </el-tab-pane>
         <el-tab-pane :label="`断事笔记(${counts.notes})`" name="notes">
           <GenericTable :rows="data.notes" />
-        </el-tab-pane>
-        <el-tab-pane :label="`短信记录(${counts.smsRecords})`" name="smsRecords">
-          <GenericTable :rows="data.smsRecords" />
         </el-tab-pane>
       </el-tabs>
     </el-card>
@@ -57,15 +51,13 @@ const route = useRoute()
 const loading = ref(false)
 const user = ref(null)
 const activeTab = ref('orders')
-const data = reactive({ orders: [], benefits: [], eightRecords: [], fortunes: [], notes: [], smsRecords: [] })
+const data = reactive({ orders: [], benefits: [], eightRecords: [], notes: [] })
 
 const counts = computed(() => ({
   orders: data.orders.length,
   benefits: data.benefits.length,
   eightRecords: data.eightRecords.length,
-  fortunes: data.fortunes.length,
-  notes: data.notes.length,
-  smsRecords: data.smsRecords.length
+  notes: data.notes.length
 }))
 
 // 通用表格：根据首行 keys 动态生成列，适配未知业务表结构
@@ -102,9 +94,7 @@ async function load() {
     data.orders = d.orders || []
     data.benefits = d.benefits || []
     data.eightRecords = d.eightRecords || []
-    data.fortunes = d.fortunes || []
     data.notes = d.notes || []
-    data.smsRecords = d.smsRecords || []
   } finally {
     loading.value = false
   }

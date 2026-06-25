@@ -154,7 +154,7 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  -- 一级菜单
  (1 ,'dashboard:view','主控制台',1,0 ,'/dashboard','DataLine',1),
  (10,'user:menu'      ,'用户中心'  ,1,0 ,'/user','User',2),
- (20,'order:menu'     ,'会员与订单',1,0 ,'/order','Goods',3),
+ (20,'order:menu'     ,'商城管理',1,0 ,'/order','Goods',3),
  (35,'analytics:menu' ,'数据分析'  ,1,0 ,'/analytics','TrendCharts',5),
  (40,'system:menu'    ,'系统管理'  ,1,0 ,'/system','Setting',6),
  -- 用户中心
@@ -162,7 +162,7 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  (12,'user:detail','查看详情',2,11,'','',1),
  (13,'user:disable','启用/禁用',2,11,'','',2),
  (14,'user:export','导出',2,11,'','',3),
- -- 会员与订单
+ -- 商城管理
  (21,'order:list'  ,'订单管理',1,20,'/order/list','',1),
  (22,'order:detail','订单详情',2,21,'','',1),
  (23,'order:refund','退款操作',2,21,'','',2),
@@ -180,9 +180,6 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  (42,'admin:edit'     ,'编辑管理员',2,41,'','',1),
  (43,'role:list'      ,'角色管理',1,40,'/system/role','',2),
  (44,'role:assign'    ,'分配权限',2,43,'','',1),
- (45,'permission:tree','权限菜单',1,40,'/system/permission','',3),
- (46,'config:list'    ,'系统配置',1,40,'/system/config','',4),
- (47,'config:edit'    ,'编辑配置',2,46,'','',1),
  (48,'log:login'      ,'登录日志',1,40,'/system/login-log','',5),
  (49,'log:operation'  ,'操作日志',1,40,'/system/operation-log','',6);
 
@@ -202,5 +199,16 @@ DELETE FROM `admin_role_permission`
    WHERE `permission_code` IN ('func:config','content:menu','banner:list','notice:list')) t);
 DELETE FROM `admin_permission`
  WHERE `permission_code` IN ('func:config','content:menu','banner:list','notice:list');
+
+-- 重命名：「会员与订单」一级菜单更名为「商城管理」（对历史库幂等生效，INSERT IGNORE 不更新已存在行）。
+UPDATE `admin_permission` SET `permission_name`='商城管理'
+ WHERE `permission_code`='order:menu' AND `permission_name`='会员与订单';
+
+-- 清理：移除已下线的「权限菜单」「系统配置」菜单及其授权（对历史库幂等生效）。
+DELETE FROM `admin_role_permission`
+ WHERE `permission_id` IN (SELECT id FROM (SELECT id FROM `admin_permission`
+   WHERE `permission_code` IN ('permission:tree','config:list','config:edit')) t);
+DELETE FROM `admin_permission`
+ WHERE `permission_code` IN ('permission:tree','config:list','config:edit');
 
 -- 其余角色的权限可在「角色管理」中按需分配（此处不预置，避免与运营实际策略冲突）。
