@@ -11,11 +11,272 @@
  Target Server Version : 80043
  File Encoding         : 65001
 
- Date: 24/06/2026 10:19:07
+ Date: 26/06/2026 16:29:57
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for admin_login_log
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_login_log`;
+CREATE TABLE `admin_login_log`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `admin_id` bigint(0) NULL DEFAULT NULL,
+  `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `user_agent` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `login_type` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1登录 2登出',
+  `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1成功 0失败',
+  `msg` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `login_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_admin`(`admin_id`) USING BTREE,
+  INDEX `idx_time`(`login_time`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台登录日志' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_login_log
+-- ----------------------------
+INSERT INTO `admin_login_log` VALUES (1, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:15');
+INSERT INTO `admin_login_log` VALUES (2, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:21');
+INSERT INTO `admin_login_log` VALUES (3, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:03:59');
+INSERT INTO `admin_login_log` VALUES (4, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:11:47');
+INSERT INTO `admin_login_log` VALUES (5, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 16:27:21');
+
+-- ----------------------------
+-- Table structure for admin_operation_log
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_operation_log`;
+CREATE TABLE `admin_operation_log`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `admin_id` bigint(0) NULL DEFAULT NULL,
+  `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `module` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `operation` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `method` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '类.方法',
+  `request_uri` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `request_method` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT 'GET/POST...',
+  `request_param` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `response_result` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `cost_ms` bigint(0) NULL DEFAULT NULL COMMENT '耗时(毫秒)',
+  `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1成功 0异常',
+  `error_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
+  `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_admin`(`admin_id`) USING BTREE,
+  INDEX `idx_time`(`create_time`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台操作日志' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_operation_log
+-- ----------------------------
+INSERT INTO `admin_operation_log` VALUES (1, 1, 'admin', '商品管理', '保存商品', 'com.ydzz.admin.business.controller.GoodsController.save', '/api/admin/goods', 'POST', '[{\"id\":20,\"itemDesc\":\"命宫、身宫设置\",\"itemDiscount\":1,\"itemId\":\"10020\",\"itemPrice\":1,\"itemType\":3}]', NULL, '0:0:0:0:0:0:0:1', 103, 1, NULL, '2026-06-24 11:36:40');
+INSERT INTO `admin_operation_log` VALUES (2, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/5', 'DELETE', '[5]', NULL, '0:0:0:0:0:0:0:1', 358, 1, NULL, '2026-06-24 13:30:47');
+INSERT INTO `admin_operation_log` VALUES (3, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/4', 'DELETE', '[4]', NULL, '0:0:0:0:0:0:0:1', 5, 1, NULL, '2026-06-24 13:30:51');
+
+-- ----------------------------
+-- Table structure for admin_permission
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_permission`;
+CREATE TABLE `admin_permission`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `permission_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '权限码 user:list 等',
+  `permission_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '名称',
+  `permission_type` tinyint(0) NOT NULL COMMENT '1菜单 2按钮 3接口',
+  `parent_id` bigint(0) NOT NULL DEFAULT 0 COMMENT '父级ID',
+  `path` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端路由/接口路径',
+  `component` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '前端组件',
+  `icon` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '图标',
+  `sort_order` int(0) NOT NULL DEFAULT 0 COMMENT '排序',
+  `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '0禁用 1启用',
+  `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+  `update_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
+  `deleted` tinyint(0) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_parent`(`parent_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 50 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台权限/菜单' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_permission
+-- ----------------------------
+INSERT INTO `admin_permission` VALUES (1, 'dashboard:view', '主控制台', 1, 0, '/dashboard', NULL, 'DataLine', 1, 1, '2026-06-24 10:49:42', '2026-06-24 11:55:32', 0);
+INSERT INTO `admin_permission` VALUES (10, 'user:menu', '用户中心', 1, 0, '/user', NULL, 'User', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (11, 'user:list', '用户列表', 1, 10, '/user/list', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (12, 'user:detail', '查看详情', 2, 11, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (13, 'user:disable', '启用/禁用', 2, 11, '', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (14, 'user:export', '导出', 2, 11, '', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (20, 'order:menu', '会员与订单', 1, 0, '/order', NULL, 'Goods', 3, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (21, 'order:list', '订单管理', 1, 20, '/order/list', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (22, 'order:detail', '订单详情', 2, 21, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (23, 'order:refund', '退款操作', 2, 21, '', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (24, 'order:export', '导出', 2, 21, '', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (25, 'goods:list', '商品管理', 1, 20, '/order/goods', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (26, 'goods:edit', '编辑商品', 2, 25, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (27, 'func:config', '功能配置', 1, 20, '/order/func-config', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-24 11:36:08', 1);
+INSERT INTO `admin_permission` VALUES (28, 'benefit:list', '权益管理', 1, 20, '/order/benefit', NULL, '', 4, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (29, 'payfail:list', '支付异常监控', 1, 20, '/order/payment-failure', NULL, '', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (30, 'content:menu', '内容运营', 1, 0, '/content', NULL, 'Picture', 4, 1, '2026-06-24 10:49:42', '2026-06-24 11:43:59', 1);
+INSERT INTO `admin_permission` VALUES (31, 'banner:list', 'Banner管理', 1, 30, '/content/banner', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 11:43:59', 1);
+INSERT INTO `admin_permission` VALUES (32, 'notice:list', '文案/公告', 1, 30, '/content/notice', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 11:43:59', 1);
+INSERT INTO `admin_permission` VALUES (35, 'analytics:menu', '数据分析', 1, 0, '/analytics', NULL, 'TrendCharts', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (36, 'analytics:user', '用户分析', 1, 35, '/analytics/user', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-26 09:44:59', 1);
+INSERT INTO `admin_permission` VALUES (37, 'analytics:income', '收入分析', 1, 35, '/analytics/income', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-26 09:44:59', 1);
+INSERT INTO `admin_permission` VALUES (38, 'analytics:func', '功能分析', 1, 35, '/analytics/func', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-26 09:44:59', 1);
+INSERT INTO `admin_permission` VALUES (39, 'analytics:realtime', '实时数据', 1, 35, '/analytics/realtime', NULL, '', 4, 1, '2026-06-26 09:35:07', '2026-06-26 09:35:07', 0);
+INSERT INTO `admin_permission` VALUES (40, 'system:menu', '系统管理', 1, 0, '/system', NULL, 'Setting', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (41, 'admin:list', '管理员管理', 1, 40, '/system/admin', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (42, 'admin:edit', '编辑管理员', 2, 41, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (43, 'role:list', '角色管理', 1, 40, '/system/role', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (44, 'role:assign', '分配权限', 2, 43, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (45, 'permission:tree', '权限菜单', 1, 40, '/system/permission', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (46, 'config:list', '系统配置', 1, 40, '/system/config', NULL, '', 4, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (47, 'config:edit', '编辑配置', 2, 46, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (48, 'log:login', '登录日志', 1, 40, '/system/login-log', NULL, '', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (49, 'log:operation', '操作日志', 1, 40, '/system/operation-log', NULL, '', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+
+-- ----------------------------
+-- Table structure for admin_role
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_role`;
+CREATE TABLE `admin_role`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `role_code` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色编码 SUPER_ADMIN/OPERATOR...',
+  `role_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '角色名称',
+  `description` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '描述',
+  `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '0禁用 1启用',
+  `sort_order` int(0) NOT NULL DEFAULT 0 COMMENT '排序',
+  `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+  `update_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
+  `deleted` tinyint(0) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_role_code`(`role_code`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台角色' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_role
+-- ----------------------------
+INSERT INTO `admin_role` VALUES (1, 'SUPER_ADMIN', '超级管理员', '拥有全部权限', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_role` VALUES (2, 'OPERATOR', '运营', '运营人员，内容/功能/活动编辑，数据查看', 1, 2, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_role` VALUES (3, 'SERVICE', '客服', '用户查看与禁用，订单查看', 1, 3, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_role` VALUES (4, 'FINANCE', '财务', '订单/退款/收入相关', 1, 4, '2026-06-24 10:49:42', '2026-06-24 13:30:51', 1);
+INSERT INTO `admin_role` VALUES (5, 'ANALYST', '数据分析', '数据分析查看', 1, 5, '2026-06-24 10:49:42', '2026-06-24 13:30:47', 1);
+
+-- ----------------------------
+-- Table structure for admin_role_permission
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_role_permission`;
+CREATE TABLE `admin_role_permission`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `role_id` bigint(0) NOT NULL,
+  `permission_id` bigint(0) NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_role_perm`(`role_id`, `permission_id`) USING BTREE,
+  INDEX `idx_role`(`role_id`) USING BTREE,
+  INDEX `idx_perm`(`permission_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '角色权限关联' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_role_permission
+-- ----------------------------
+INSERT INTO `admin_role_permission` VALUES (1, 1, 1);
+INSERT INTO `admin_role_permission` VALUES (2, 1, 10);
+INSERT INTO `admin_role_permission` VALUES (7, 1, 11);
+INSERT INTO `admin_role_permission` VALUES (8, 1, 12);
+INSERT INTO `admin_role_permission` VALUES (9, 1, 13);
+INSERT INTO `admin_role_permission` VALUES (10, 1, 14);
+INSERT INTO `admin_role_permission` VALUES (3, 1, 20);
+INSERT INTO `admin_role_permission` VALUES (11, 1, 21);
+INSERT INTO `admin_role_permission` VALUES (16, 1, 22);
+INSERT INTO `admin_role_permission` VALUES (17, 1, 23);
+INSERT INTO `admin_role_permission` VALUES (18, 1, 24);
+INSERT INTO `admin_role_permission` VALUES (12, 1, 25);
+INSERT INTO `admin_role_permission` VALUES (19, 1, 26);
+INSERT INTO `admin_role_permission` VALUES (14, 1, 28);
+INSERT INTO `admin_role_permission` VALUES (15, 1, 29);
+INSERT INTO `admin_role_permission` VALUES (5, 1, 35);
+INSERT INTO `admin_role_permission` VALUES (34, 1, 39);
+INSERT INTO `admin_role_permission` VALUES (6, 1, 40);
+INSERT INTO `admin_role_permission` VALUES (25, 1, 41);
+INSERT INTO `admin_role_permission` VALUES (31, 1, 42);
+INSERT INTO `admin_role_permission` VALUES (26, 1, 43);
+INSERT INTO `admin_role_permission` VALUES (32, 1, 44);
+INSERT INTO `admin_role_permission` VALUES (27, 1, 45);
+INSERT INTO `admin_role_permission` VALUES (28, 1, 46);
+INSERT INTO `admin_role_permission` VALUES (33, 1, 47);
+INSERT INTO `admin_role_permission` VALUES (29, 1, 48);
+INSERT INTO `admin_role_permission` VALUES (30, 1, 49);
+
+-- ----------------------------
+-- Table structure for admin_user
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_user`;
+CREATE TABLE `admin_user`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '登录账号',
+  `password` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT 'BCrypt 加密密码',
+  `real_name` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '姓名',
+  `avatar` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '头像',
+  `phone` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '手机号',
+  `email` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '邮箱',
+  `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '0禁用 1启用',
+  `last_login_time` datetime(0) NULL DEFAULT NULL COMMENT '最后登录时间',
+  `last_login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '最后登录IP',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '备注',
+  `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) COMMENT '创建时间',
+  `update_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0) COMMENT '更新时间',
+  `deleted` tinyint(0) NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删 1已删',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_username`(`username`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_user
+-- ----------------------------
+INSERT INTO `admin_user` VALUES (1, 'admin', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '超级管理员', NULL, NULL, NULL, 1, '2026-06-24 16:27:21', '0:0:0:0:0:0:0:1', '系统初始化创建', '2026-06-24 10:52:38', '2026-06-24 16:27:21', 0);
+
+-- ----------------------------
+-- Table structure for admin_user_role
+-- ----------------------------
+DROP TABLE IF EXISTS `admin_user_role`;
+CREATE TABLE `admin_user_role`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `admin_id` bigint(0) NOT NULL,
+  `role_id` bigint(0) NOT NULL,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_admin_role`(`admin_id`, `role_id`) USING BTREE,
+  INDEX `idx_admin`(`admin_id`) USING BTREE,
+  INDEX `idx_role`(`role_id`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '管理员角色关联' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of admin_user_role
+-- ----------------------------
+INSERT INTO `admin_user_role` VALUES (1, 1, 1);
+
+-- ----------------------------
+-- Table structure for sys_config
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_config`;
+CREATE TABLE `sys_config`  (
+  `id` bigint(0) NOT NULL AUTO_INCREMENT,
+  `config_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '配置键',
+  `config_value` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '配置值',
+  `config_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '配置名称',
+  `config_group` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '分组',
+  `remark` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `update_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `create_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0),
+  `update_time` datetime(0) NOT NULL DEFAULT CURRENT_TIMESTAMP(0) ON UPDATE CURRENT_TIMESTAMP(0),
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_config_key`(`config_key`) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统配置' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Records of sys_config
+-- ----------------------------
 
 -- ----------------------------
 -- Table structure for visitinfo
