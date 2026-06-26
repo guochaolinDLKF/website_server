@@ -52,6 +52,7 @@
           unit="次"
           :days="7"
           :value-decimals="2"
+          :filterable="true"
         />
       </el-col>
     </el-row>

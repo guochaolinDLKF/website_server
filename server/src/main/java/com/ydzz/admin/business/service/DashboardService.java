@@ -685,6 +685,488 @@ public class DashboardService {
         return String.format("%02d:%02d", m / 60, m % 60);
     }
 
+    /* ==================== 实时新增用户 ==================== */
+
+    /** 某天各 bucket 时间点的新增用户数（按 createTime 落桶计数） */
+    private long[] dayNewCounts(LocalDate day, int bucket, int slots) {
+        LocalDateTime dayStart = day.atStartOfDay();
+        long[] counts = new long[slots];
+        for (Map<String, Object> r : dashboardMapper.newUserStream(dayStart, day.plusDays(1).atStartOfDay())) {
+            int k = (int) (Duration.between(dayStart, toLdt(r.get("t"))).toMinutes() / bucket);
+            if (k >= 0 && k < slots) {
+                counts[k]++;
+            }
+        }
+        return counts;
+    }
+
+    /** [start,end] 区间连续各 bucket 时间点的新增用户数 */
+    private long[] rangeNewCounts(LocalDate start, LocalDate end, int bucket, int slots) {
+        LocalDateTime rangeStart = start.atStartOfDay();
+        long[] counts = new long[slots];
+        for (Map<String, Object> r : dashboardMapper.newUserStream(rangeStart, end.plusDays(1).atStartOfDay())) {
+            int k = (int) (Duration.between(rangeStart, toLdt(r.get("t"))).toMinutes() / bucket);
+            if (k >= 0 && k < slots) {
+                counts[k]++;
+            }
+        }
+        return counts;
+    }
+
+    /** 转累计（前缀和） */
+    private long[] toCumulative(long[] a) {
+        long[] c = new long[a.length];
+        long s = 0;
+        for (int i = 0; i < a.length; i++) {
+            s += a[i];
+            c[i] = s;
+        }
+        return c;
+    }
+
+    /**
+     * 实时新增用户（按 bucket 分钟分桶，今日 + 昨日 VS）。cumulative=true 返回当日累计曲线。
+     *
+     * @param day           统计日（默认今日）
+     * @param bucketMinutes 分桶粒度：1/5/10/60 分钟（其它按 5）
+     * @param cumulative    是否累计
+     */
+    public Map<String, Object> realtimeNewUsers(LocalDate day, int bucketMinutes, boolean cumulative) {
+        if (day == null) {
+            day = LocalDate.now();
+        }
+        int bucket = (bucketMinutes == 1 || bucketMinutes == 10 || bucketMinutes == 60) ? bucketMinutes : 5;
+        int slots = 1440 / bucket;
+        boolean isToday = day.equals(LocalDate.now());
+        int todayLast = isToday
+                ? Math.min(slots - 1, java.time.LocalTime.now().toSecondOfDay() / 60 / bucket)
+                : slots - 1;
+
+        long[] rawToday = dayNewCounts(day, bucket, slots);
+        long[] rawPrev = dayNewCounts(day.minusDays(1), bucket, slots);
+        long[] dispToday = cumulative ? toCumulative(rawToday) : rawToday;
+        long[] dispPrev = cumulative ? toCumulative(rawPrev) : rawPrev;
+
+        List<String> labels = new ArrayList<>();
+        List<Long> today = new ArrayList<>();
+        List<Long> prev = new ArrayList<>();
+        long sum = 0;
+        int cnt = 0;
+        for (int k = 0; k < slots; k++) {
+            labels.add(slotLabel(k, bucket));
+            prev.add(dispPrev[k]);
+            if (k <= todayLast) {
+                today.add(dispToday[k]);
+                sum += rawToday[k];
+                cnt++;
+            } else {
+                today.add(null);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bucket", bucket);
+        data.put("labels", labels);
+        data.put("today", today);
+        data.put("prev", prev);
+        data.put("latest", todayLast >= 0 ? dispToday[todayLast] : 0L);
+        data.put("latestLabel", day + " " + slotLabel(todayLast, bucket));
+        data.put("mean", cnt == 0 ? null : BigDecimal.valueOf((double) sum / cnt).setScale(2, RoundingMode.HALF_UP));
+        data.put("sum", sum);
+        return data;
+    }
+
+    /**
+     * 实时新增用户（区间连续序列，保持 bucket 粒度，与前一等长周期 VS）。cumulative=true 为区间连续累计。
+     */
+    public Map<String, Object> realtimeNewUsersRange(LocalDate start, LocalDate end, int bucketMinutes, boolean cumulative) {
+        int bucket = (bucketMinutes == 1 || bucketMinutes == 10 || bucketMinutes == 60) ? bucketMinutes : 5;
+        int slotsPerDay = 1440 / bucket;
+        long days = end.toEpochDay() - start.toEpochDay() + 1;
+        if (days > 92) {
+            start = end.minusDays(91);
+            days = 92;
+        }
+        int slots = (int) (days * slotsPerDay);
+
+        long[] rawCur = rangeNewCounts(start, end, bucket, slots);
+        LocalDate prevStart = start.minusDays(days);
+        LocalDate prevEnd = end.minusDays(days);
+        long[] rawPrev = rangeNewCounts(prevStart, prevEnd, bucket, slots);
+        long[] dispCur = cumulative ? toCumulative(rawCur) : rawCur;
+        long[] dispPrev = cumulative ? toCumulative(rawPrev) : rawPrev;
+
+        LocalDateTime rangeStart = start.atStartOfDay();
+        LocalDateTime prevRangeStart = prevStart.atStartOfDay();
+        int curLast = slots - 1;
+        if (!end.isBefore(LocalDate.now())) {
+            long nowMin = Duration.between(rangeStart, LocalDateTime.now()).toMinutes();
+            curLast = (int) Math.max(0, Math.min(slots - 1, nowMin / bucket));
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<String> prevLabels = new ArrayList<>();
+        List<Long> today = new ArrayList<>();
+        List<Long> prev = new ArrayList<>();
+        long sum = 0;
+        long latestVal = 0;
+        String latestLabel = "";
+        for (int k = 0; k < slots; k++) {
+            labels.add(slotLabelAt(rangeStart, k, bucket));
+            prevLabels.add(slotLabelAt(prevRangeStart, k, bucket));
+            prev.add(dispPrev[k]);
+            if (k <= curLast) {
+                today.add(dispCur[k]);
+                sum += rawCur[k];
+                latestVal = dispCur[k];
+                latestLabel = slotLabelAt(rangeStart, k, bucket);
+            } else {
+                today.add(null);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bucket", bucket);
+        data.put("range", true);
+        data.put("labels", labels);
+        data.put("prevLabels", prevLabels);
+        data.put("today", today);
+        data.put("prev", prev);
+        data.put("latest", latestVal);
+        data.put("latestLabel", latestLabel);
+        data.put("mean", null);
+        data.put("sum", sum);
+        return data;
+    }
+
+    /**
+     * 新增用户趋势（按 天/周/月 求和；cumulative=true 为运行累计）。
+     * 默认窗口：day=近30天、week=近12周、month=近12个月，截至昨日。
+     */
+    public Map<String, Object> newUsersTrend(String dim, LocalDate start, LocalDate end, boolean cumulative) {
+        LocalDate maxDay = LocalDate.now().minusDays(1);
+        if (end == null || end.isAfter(maxDay)) {
+            end = maxDay;
+        }
+        if (start == null) {
+            if ("week".equalsIgnoreCase(dim)) {
+                start = mondayOf(end).minusWeeks(11);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                start = end.withDayOfMonth(1).minusMonths(11);
+            } else {
+                start = end.minusDays(29);
+            }
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        if (start.isAfter(end)) {
+            data.put("labels", new ArrayList<>());
+            data.put("values", new ArrayList<>());
+            data.put("latest", null);
+            data.put("latestLabel", "");
+            data.put("mean", null);
+            data.put("sum", null);
+            return data;
+        }
+
+        Map<LocalDate, Long> dayCount = new HashMap<>();
+        for (Map<String, Object> r : dashboardMapper.newUserDailyCount(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            LocalDate d = LocalDate.parse(String.valueOf(r.get("d")).substring(0, 10));
+            dayCount.put(d, ((Number) r.get("c")).longValue());
+        }
+
+        Map<String, Long> agg = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            long c = dayCount.getOrDefault(d, 0L);
+            String key;
+            String label;
+            LocalDate kd;
+            if ("week".equalsIgnoreCase(dim)) {
+                kd = mondayOf(d);
+                key = kd.toString();
+                label = mmdd(kd);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                kd = d.withDayOfMonth(1);
+                key = kd.toString().substring(0, 7);
+                label = key;
+            } else {
+                kd = d;
+                key = d.toString();
+                label = mmdd(d);
+            }
+            agg.merge(key, c, Long::sum);
+            keyLabel.putIfAbsent(key, label);
+            keyDate.putIfAbsent(key, kd);
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> values = new ArrayList<>();
+        long running = 0;
+        long sum = 0;
+        Long latest = null;
+        String latestLabel = "";
+        for (Map.Entry<String, Long> e : agg.entrySet()) {
+            long v = e.getValue();
+            running += v;
+            long disp = cumulative ? running : v;
+            labels.add(keyLabel.get(e.getKey()));
+            values.add(disp);
+            sum += v;
+            latest = disp;
+            latestLabel = periodLabel(dim, keyDate.get(e.getKey()));
+        }
+
+        data.put("labels", labels);
+        data.put("values", values);
+        data.put("latest", latest);
+        data.put("latestLabel", latestLabel);
+        data.put("mean", labels.isEmpty() ? null : BigDecimal.valueOf((double) sum / labels.size()).setScale(2, RoundingMode.HALF_UP));
+        data.put("sum", sum);
+        return data;
+    }
+
+    /* ==================== 实时付费金额 ==================== */
+
+    /** 金额规整：double → 2 位小数 BigDecimal */
+    private BigDecimal money(double v) {
+        return BigDecimal.valueOf(v).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** 转累计（前缀和，double） */
+    private double[] toCumulativeD(double[] a) {
+        double[] c = new double[a.length];
+        double s = 0;
+        for (int i = 0; i < a.length; i++) {
+            s += a[i];
+            c[i] = s;
+        }
+        return c;
+    }
+
+    /** 某天各 bucket 时间点的成功支付金额合计 */
+    private double[] dayPaySums(LocalDate day, int bucket, int slots) {
+        LocalDateTime dayStart = day.atStartOfDay();
+        double[] sums = new double[slots];
+        for (Map<String, Object> r : dashboardMapper.paymentStream(dayStart, day.plusDays(1).atStartOfDay())) {
+            int k = (int) (Duration.between(dayStart, toLdt(r.get("t"))).toMinutes() / bucket);
+            if (k >= 0 && k < slots) {
+                sums[k] += ((Number) r.get("amt")).doubleValue();
+            }
+        }
+        return sums;
+    }
+
+    /** [start,end] 区间连续各 bucket 时间点的成功支付金额合计 */
+    private double[] rangePaySums(LocalDate start, LocalDate end, int bucket, int slots) {
+        LocalDateTime rangeStart = start.atStartOfDay();
+        double[] sums = new double[slots];
+        for (Map<String, Object> r : dashboardMapper.paymentStream(rangeStart, end.plusDays(1).atStartOfDay())) {
+            int k = (int) (Duration.between(rangeStart, toLdt(r.get("t"))).toMinutes() / bucket);
+            if (k >= 0 && k < slots) {
+                sums[k] += ((Number) r.get("amt")).doubleValue();
+            }
+        }
+        return sums;
+    }
+
+    /**
+     * 实时付费金额（按 bucket 分钟分桶，今日 + 昨日 VS）。cumulative=true 返回当日累计曲线。
+     */
+    public Map<String, Object> realtimeRevenue(LocalDate day, int bucketMinutes, boolean cumulative) {
+        if (day == null) {
+            day = LocalDate.now();
+        }
+        int bucket = (bucketMinutes == 1 || bucketMinutes == 10 || bucketMinutes == 60) ? bucketMinutes : 5;
+        int slots = 1440 / bucket;
+        boolean isToday = day.equals(LocalDate.now());
+        int todayLast = isToday
+                ? Math.min(slots - 1, java.time.LocalTime.now().toSecondOfDay() / 60 / bucket)
+                : slots - 1;
+
+        double[] rawToday = dayPaySums(day, bucket, slots);
+        double[] rawPrev = dayPaySums(day.minusDays(1), bucket, slots);
+        double[] dispToday = cumulative ? toCumulativeD(rawToday) : rawToday;
+        double[] dispPrev = cumulative ? toCumulativeD(rawPrev) : rawPrev;
+
+        List<String> labels = new ArrayList<>();
+        List<BigDecimal> today = new ArrayList<>();
+        List<BigDecimal> prev = new ArrayList<>();
+        double sum = 0;
+        int cnt = 0;
+        for (int k = 0; k < slots; k++) {
+            labels.add(slotLabel(k, bucket));
+            prev.add(money(dispPrev[k]));
+            if (k <= todayLast) {
+                today.add(money(dispToday[k]));
+                sum += rawToday[k];
+                cnt++;
+            } else {
+                today.add(null);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bucket", bucket);
+        data.put("labels", labels);
+        data.put("today", today);
+        data.put("prev", prev);
+        data.put("latest", todayLast >= 0 ? money(dispToday[todayLast]) : BigDecimal.ZERO);
+        data.put("latestLabel", day + " " + slotLabel(todayLast, bucket));
+        data.put("mean", cnt == 0 ? null : money(sum / cnt));
+        data.put("sum", money(sum));
+        return data;
+    }
+
+    /**
+     * 实时付费金额（区间连续序列，保持 bucket 粒度，与前一等长周期 VS）。cumulative=true 为区间连续累计。
+     */
+    public Map<String, Object> realtimeRevenueRange(LocalDate start, LocalDate end, int bucketMinutes, boolean cumulative) {
+        int bucket = (bucketMinutes == 1 || bucketMinutes == 10 || bucketMinutes == 60) ? bucketMinutes : 5;
+        int slotsPerDay = 1440 / bucket;
+        long days = end.toEpochDay() - start.toEpochDay() + 1;
+        if (days > 92) {
+            start = end.minusDays(91);
+            days = 92;
+        }
+        int slots = (int) (days * slotsPerDay);
+
+        double[] rawCur = rangePaySums(start, end, bucket, slots);
+        LocalDate prevStart = start.minusDays(days);
+        LocalDate prevEnd = end.minusDays(days);
+        double[] rawPrev = rangePaySums(prevStart, prevEnd, bucket, slots);
+        double[] dispCur = cumulative ? toCumulativeD(rawCur) : rawCur;
+        double[] dispPrev = cumulative ? toCumulativeD(rawPrev) : rawPrev;
+
+        LocalDateTime rangeStart = start.atStartOfDay();
+        LocalDateTime prevRangeStart = prevStart.atStartOfDay();
+        int curLast = slots - 1;
+        if (!end.isBefore(LocalDate.now())) {
+            long nowMin = Duration.between(rangeStart, LocalDateTime.now()).toMinutes();
+            curLast = (int) Math.max(0, Math.min(slots - 1, nowMin / bucket));
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<String> prevLabels = new ArrayList<>();
+        List<BigDecimal> today = new ArrayList<>();
+        List<BigDecimal> prev = new ArrayList<>();
+        double sum = 0;
+        BigDecimal latestVal = BigDecimal.ZERO;
+        String latestLabel = "";
+        for (int k = 0; k < slots; k++) {
+            labels.add(slotLabelAt(rangeStart, k, bucket));
+            prevLabels.add(slotLabelAt(prevRangeStart, k, bucket));
+            prev.add(money(dispPrev[k]));
+            if (k <= curLast) {
+                today.add(money(dispCur[k]));
+                sum += rawCur[k];
+                latestVal = money(dispCur[k]);
+                latestLabel = slotLabelAt(rangeStart, k, bucket);
+            } else {
+                today.add(null);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bucket", bucket);
+        data.put("range", true);
+        data.put("labels", labels);
+        data.put("prevLabels", prevLabels);
+        data.put("today", today);
+        data.put("prev", prev);
+        data.put("latest", latestVal);
+        data.put("latestLabel", latestLabel);
+        data.put("mean", null);
+        data.put("sum", money(sum));
+        return data;
+    }
+
+    /**
+     * 付费金额趋势（按 天/周/月 求和；cumulative=true 为运行累计）。
+     * 默认窗口：day=近30天、week=近12周、month=近12个月，截至昨日。
+     */
+    public Map<String, Object> revenueTrend(String dim, LocalDate start, LocalDate end, boolean cumulative) {
+        LocalDate maxDay = LocalDate.now().minusDays(1);
+        if (end == null || end.isAfter(maxDay)) {
+            end = maxDay;
+        }
+        if (start == null) {
+            if ("week".equalsIgnoreCase(dim)) {
+                start = mondayOf(end).minusWeeks(11);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                start = end.withDayOfMonth(1).minusMonths(11);
+            } else {
+                start = end.minusDays(29);
+            }
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        if (start.isAfter(end)) {
+            data.put("labels", new ArrayList<>());
+            data.put("values", new ArrayList<>());
+            data.put("latest", null);
+            data.put("latestLabel", "");
+            data.put("mean", null);
+            data.put("sum", null);
+            return data;
+        }
+
+        Map<LocalDate, Double> daySum = new HashMap<>();
+        for (Map<String, Object> r : dashboardMapper.paymentDailySum(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            LocalDate d = LocalDate.parse(String.valueOf(r.get("d")).substring(0, 10));
+            daySum.put(d, ((Number) r.get("amt")).doubleValue());
+        }
+
+        Map<String, Double> agg = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            double v = daySum.getOrDefault(d, 0d);
+            String key;
+            String label;
+            LocalDate kd;
+            if ("week".equalsIgnoreCase(dim)) {
+                kd = mondayOf(d);
+                key = kd.toString();
+                label = mmdd(kd);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                kd = d.withDayOfMonth(1);
+                key = kd.toString().substring(0, 7);
+                label = key;
+            } else {
+                kd = d;
+                key = d.toString();
+                label = mmdd(d);
+            }
+            agg.merge(key, v, Double::sum);
+            keyLabel.putIfAbsent(key, label);
+            keyDate.putIfAbsent(key, kd);
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<BigDecimal> values = new ArrayList<>();
+        double running = 0;
+        double sum = 0;
+        BigDecimal latest = null;
+        String latestLabel = "";
+        for (Map.Entry<String, Double> e : agg.entrySet()) {
+            double v = e.getValue();
+            running += v;
+            labels.add(keyLabel.get(e.getKey()));
+            values.add(money(cumulative ? running : v));
+            sum += v;
+            latest = money(cumulative ? running : v);
+            latestLabel = periodLabel(dim, keyDate.get(e.getKey()));
+        }
+
+        data.put("labels", labels);
+        data.put("values", values);
+        data.put("latest", latest);
+        data.put("latestLabel", latestLabel);
+        data.put("mean", labels.isEmpty() ? null : money(sum / labels.size()));
+        data.put("sum", money(sum));
+        return data;
+    }
+
     /**
      * 活跃用户趋势（按 天/周/月 去重活跃用户数：DAU/WAU/MAU）。
      *

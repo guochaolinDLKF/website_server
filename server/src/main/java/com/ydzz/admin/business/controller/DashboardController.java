@@ -118,6 +118,34 @@ public class DashboardController {
         return Result.success(dashboardService.onlineTrend(dim, start, end));
     }
 
+    @Operation(summary = "实时新增用户（单日今日+昨日VS；传 start/end 跨多日则区间连续+前一周期VS；cumulative=1 累计）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/realtime-new-users")
+    public Result<Map<String, Object>> realtimeNewUsers(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "5") int bucket,
+            @RequestParam(defaultValue = "0") int cumulative) {
+        boolean cum = cumulative == 1;
+        if (start != null && end != null && !start.isEqual(end)) {
+            return Result.success(dashboardService.realtimeNewUsersRange(start, end, bucket, cum));
+        }
+        LocalDate day = date != null ? date : end;
+        return Result.success(dashboardService.realtimeNewUsers(day, bucket, cum));
+    }
+
+    @Operation(summary = "新增用户趋势（dim=day/week/month；cumulative=1 运行累计）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/new-users-trend")
+    public Result<Map<String, Object>> newUsersTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "0") int cumulative) {
+        return Result.success(dashboardService.newUsersTrend(dim, start, end, cumulative == 1));
+    }
+
     @Operation(summary = "收入趋势")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/income-trend")

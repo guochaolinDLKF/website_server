@@ -119,4 +119,24 @@ public interface DashboardMapper {
             + "WHERE u.createTime >= #{start} AND u.createTime < #{end} "
             + "GROUP BY DATE(u.createTime) ORDER BY d")
     List<Map<String, Object>> nextDayRetention(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内新增用户的注册时间流水（t=createTime），用于按 bucket 分桶统计实时新增 */
+    @Select("SELECT createTime AS t FROM user WHERE createTime >= #{start} AND createTime < #{end} ORDER BY createTime")
+    List<Map<String, Object>> newUserStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内按天新增用户数：d=注册日, c=新增数，用于趋势(天/周/月)聚合 */
+    @Select("SELECT DATE(createTime) AS d, COUNT(*) AS c FROM user "
+            + "WHERE createTime >= #{start} AND createTime < #{end} GROUP BY DATE(createTime) ORDER BY d")
+    List<Map<String, Object>> newUserDailyCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内成功支付的流水（t=支付时间, amt=支付金额），用于按 bucket 分桶统计实时付费 */
+    @Select("SELECT payment_time AS t, payment_amount AS amt FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end} ORDER BY payment_time")
+    List<Map<String, Object>> paymentStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内按天成功支付金额：d=支付日, amt=金额合计，用于趋势(天/周/月)聚合 */
+    @Select("SELECT DATE(payment_time) AS d, IFNULL(SUM(payment_amount), 0) AS amt FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end} "
+            + "GROUP BY DATE(payment_time) ORDER BY d")
+    List<Map<String, Object>> paymentDailySum(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

@@ -7,14 +7,42 @@
 
     <el-row :gutter="16" style="margin-top: 16px">
       <el-col :span="24">
-        <RealtimeOnlineCard />
+        <RealtimeMetricCard />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <RealtimeMetricCard
+          title="实时新增"
+          series-name="新增用户数"
+          trend-series-name="新增用户数"
+          default-mode="intraday"
+          default-preset="today"
+          :intraday-api="getRealtimeNewUsers"
+          :trend-api="getNewUsersTrend"
+          :show-stats="true"
+        />
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <RealtimeMetricCard
+          title="实时新增（累计）"
+          series-name="新增用户数"
+          trend-series-name="新增用户数"
+          default-mode="intraday"
+          default-preset="today"
+          :intraday-api="getRealtimeNewUsers"
+          :trend-api="getNewUsersTrend"
+          :extra-params="{ cumulative: 1 }"
+        />
       </el-col>
     </el-row>
   </div>
 </template>
 
 <script setup>
-import RealtimeOnlineCard from '../../dashboard/RealtimeOnlineCard.vue'
+import RealtimeMetricCard from '../../dashboard/RealtimeMetricCard.vue'
+import { getRealtimeNewUsers, getNewUsersTrend } from '@/api/dashboard'
 </script>
 
 <style scoped>

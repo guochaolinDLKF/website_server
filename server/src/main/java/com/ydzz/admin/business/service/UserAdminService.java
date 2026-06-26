@@ -92,10 +92,25 @@ public class UserAdminService {
         // 失败段返回空并记录告警，便于按真实表结构定位修正。
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("user", user);
-        data.put("eightRecords", safeList("eight_record", () -> eightRecordMapper.selectList(
-                new LambdaQueryWrapper<EightRecord>().eq(EightRecord::getUserId, userId))));
-        data.put("notes", safeList("eight_char_note", () -> eightCharNoteMapper.selectList(
-                new LambdaQueryWrapper<EightCharNote>().eq(EightCharNote::getUserId, userId))));
+        // 八字记录 + 其断事笔记：总笔记在 eight_record.note，单项笔记按 eightCharId 归到对应记录下
+        // （记录 id 为大 bigint，关联在后端完成以避免前端 JS 数字精度丢失）
+        List<EightRecord> records = safeList("eight_record", () -> eightRecordMapper.selectList(
+                new LambdaQueryWrapper<EightRecord>().eq(EightRecord::getUserId, userId)));
+        List<EightCharNote> notes = safeList("eight_char_note", () -> eightCharNoteMapper.selectList(
+                new LambdaQueryWrapper<EightCharNote>().eq(EightCharNote::getUserId, userId)));
+        Map<Long, List<EightCharNote>> notesByRecord = new LinkedHashMap<>();
+        for (EightCharNote n : notes) {
+            if (n.getEightCharId() != null) {
+                notesByRecord.computeIfAbsent(n.getEightCharId(), k -> new java.util.ArrayList<>()).add(n);
+            }
+        }
+        List<Map<String, Object>> recordList = new java.util.ArrayList<>();
+        for (EightRecord r : records) {
+            Map<String, Object> m = cn.hutool.core.bean.BeanUtil.beanToMap(r);
+            m.put("notes", notesByRecord.getOrDefault(r.getId(), Collections.emptyList()));
+            recordList.add(m);
+        }
+        data.put("eightRecords", recordList);
         data.put("fortunes", safeList("fortune_record", () -> fortuneRecordMapper.selectList(
                 new LambdaQueryWrapper<FortuneRecord>().eq(FortuneRecord::getUserId, userId))));
         data.put("tags", safeList("user_tag", () -> userTagMapper.selectList(

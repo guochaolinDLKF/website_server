@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * 断事笔记（zhouyi.eight_char_note，只读）。列为驼峰命名，需显式 @TableField。
@@ -31,19 +30,23 @@ public class EightCharNote implements Serializable {
     private Long userId;
     @TableField("eightCharId")
     private Long eightCharId;
+    /** 记录时间（时间戳，bigint） */
     @TableField("recordTime")
-    private LocalDateTime recordTime;
+    private Long recordTime;
     @TableField("timeType")
     private Integer timeType;
+    /** 吉凶结果类别（varchar） */
     @TableField("resultType")
-    private Integer resultType;
+    private String resultType;
+    /** 事件类别（varchar） */
     @TableField("eventType")
-    private Integer eventType;
+    private String eventType;
 
     private String content;
 
+    /** 创建时间（时间戳，bigint） */
     @TableField("createTime")
-    private LocalDateTime createTime;
+    private Long createTime;
     @TableField("isTop")
     private Integer isTop;
 }

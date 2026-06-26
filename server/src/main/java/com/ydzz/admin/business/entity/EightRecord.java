@@ -43,6 +43,10 @@ public class EightRecord implements Serializable {
 
     private String zodiac;
 
+    /** 断事笔记（总笔记，eight_record.note） */
+    @TableField("note")
+    private String note;
+
     @TableField("birthTrueSolarTime")
     private Long birthTrueSolarTime;
     @TableField("birthSolarTime")

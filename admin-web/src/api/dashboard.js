@@ -39,6 +39,16 @@ export function getOnlineTrend(params = { dim: 'day' }) {
   return request.get('/dashboard/online-trend', { params })
 }
 
+// 实时新增用户：{ date|start|end, bucket, cumulative: 0|1 }
+export function getRealtimeNewUsers(params = {}) {
+  return request.get('/dashboard/realtime-new-users', { params })
+}
+
+// 新增用户趋势（多日）：{ dim, start, end, cumulative: 0|1 }
+export function getNewUsersTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/new-users-trend', { params })
+}
+
 export function getIncomeTrend(days = 30) {
   return request.get('/dashboard/income-trend', { params: { days } })
 }
