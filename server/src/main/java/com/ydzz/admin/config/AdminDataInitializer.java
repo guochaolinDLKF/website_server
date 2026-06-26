@@ -40,7 +40,8 @@ public class AdminDataInitializer implements ApplicationRunner {
 
     /** 已下线、需在启动时清理的权限码（移除对应菜单及其角色授权） */
     private static final List<String> RETIRED_PERMISSION_CODES =
-            List.of("func:config", "content:menu", "banner:list", "notice:list");
+            List.of("func:config", "content:menu", "banner:list", "notice:list",
+                    "analytics:user", "analytics:income", "analytics:func");
 
     private final AdminUserMapper adminUserMapper;
     private final AdminRoleMapper adminRoleMapper;

@@ -1,8 +1,14 @@
 <template>
   <el-card class="page-card ro-card" shadow="never">
     <div class="ro-header">
-      <span class="ro-title">实时在线人数</span>
+      <span class="ro-title">实时在线</span>
+      <div class="ro-actions">
+        <el-tooltip content="刷新" placement="top">
+          <el-icon class="ro-action-icon" @click="load"><Refresh /></el-icon>
+        </el-tooltip>
+      </div>
     </div>
+
     <div class="ro-tabs">
       <!-- 统计粒度菜单 -->
       <el-popover ref="granPopRef" trigger="click" placement="bottom-start" :width="120" popper-class="gm-pop">
@@ -10,35 +16,27 @@
           <span class="ro-tab ro-gran">{{ granLabel }}<i class="ro-caret">▾</i></span>
         </template>
         <div class="gm-menu">
-          <div class="gm-row" :class="{ active: minuteMode }" @mouseenter="sub = 'minute'" @mouseleave="sub = ''">
-            <span>按分钟</span><span class="gm-arrow">›</span>
-            <div v-show="sub === 'minute'" class="gm-sub">
-              <div
-                v-for="m in [1, 5, 10]"
-                :key="m"
-                class="gm-sub-item"
-                :class="{ active: bucket === m }"
-                @click="pickBucket(m)"
-              >{{ m }}分钟</div>
-            </div>
-          </div>
           <div class="gm-row" :class="{ active: mode === 'intraday' && bucket === 60 }" @click="pickBucket(60)">按小时</div>
           <div class="gm-row" :class="{ active: mode === 'trend' && dim === 'day' }" @click="pickDim('day')">按天</div>
           <div class="gm-row" :class="{ active: mode === 'trend' && dim === 'week' }" @click="pickDim('week')">按周</div>
           <div class="gm-row" :class="{ active: mode === 'trend' && dim === 'month' }" @click="pickDim('month')">按月</div>
         </div>
       </el-popover>
+
       <span class="ro-sep">|</span>
-      <!-- 日期范围面板 -->
-      <DateRangePanel default-preset="today" @change="onRange" />
+      <DateRangePanel ref="dateRangeRef" default-preset="today" :single="mode === 'intraday'" :multi-only="mode === 'trend'" @change="onRange" />
+
+      <div class="ro-tabs-right">
+        <el-icon class="ro-action-icon" @click="showSymbol = !showSymbol">
+          <component :is="showSymbol ? View : Hide" />
+        </el-icon>
+      </div>
     </div>
 
     <div class="ro-body" v-loading="loading">
       <div class="ro-summary">
         <div class="ro-date">{{ data.latestLabel || '—' }}</div>
-        <div class="ro-value">{{ data.latest ?? '—' }}</div>
-        <div class="ro-stat"><span class="ro-stat-label">均值</span><span class="ro-stat-num">{{ fmt2(data.mean) }}</span></div>
-        <div class="ro-stat"><span class="ro-stat-label">总和</span><span class="ro-stat-num">{{ fmtInt(data.sum) }}</span></div>
+        <div class="ro-value">{{ data.latest === null || data.latest === undefined ? '—' : Math.round(data.latest) }}</div>
       </div>
       <div ref="chartRef" class="ro-chart"></div>
     </div>
@@ -46,65 +44,70 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { Refresh, View, Hide } from '@element-plus/icons-vue'
 import { getRealtimeOnline, getOnlineTrend } from '@/api/dashboard'
 import DateRangePanel from './DateRangePanel.vue'
 
 const loading = ref(false)
-const data = reactive({ labels: [], today: [], prev: [], values: [], latest: null, latestLabel: '', mean: null, sum: null })
+const data = reactive({ labels: [], prevLabels: [], today: [], prev: [], values: [], latest: null, latestLabel: '' })
 const chartRef = ref()
 let chart
 
 // mode: intraday(单日曲线，今日+昨日) | trend(多日日均在线趋势)
 const mode = ref('intraday')
-const bucket = ref(5) // intraday 分桶（分钟）：1/5/10/60(按小时)
+const bucket = ref(60) // intraday 分桶（分钟）：固定 60(按小时，最小粒度)
 const dim = ref('day') // trend 维度：day/week/month
 const targetDate = ref('') // intraday 选中的统计日 yyyy-MM-dd（空=后端默认今日）
 const rangeStart = ref('') // 日期面板所选区间起（趋势模式用）
 const rangeEnd = ref('')
 const granPopRef = ref()
-const sub = ref('')
+const dateRangeRef = ref()
 
-const minuteMode = computed(() => mode.value === 'intraday' && [1, 5, 10].includes(bucket.value))
+const showSymbol = ref(false) // 眼睛图标：显示/隐藏数据点 + 数值标签
+
 const DIM_LABEL = { day: '按天', week: '按周', month: '按月' }
-const granLabel = computed(() => {
-  if (mode.value === 'trend') return DIM_LABEL[dim.value]
-  return bucket.value === 60 ? '按小时' : `按${bucket.value}分钟`
-})
+const granLabel = computed(() => (mode.value === 'trend' ? DIM_LABEL[dim.value] : '按小时'))
 
-function fmt2(v) {
-  if (v === null || v === undefined) return '—'
-  return Number(v).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+function fmtDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
-function fmtInt(v) {
-  if (v === null || v === undefined) return '—'
-  return Number(v).toLocaleString('zh-CN')
-}
+// 日内曲线 X 轴双行日期：跟随所选统计日（targetDate 为空时即今日）及其前一日
+const baseDate = computed(() => (targetDate.value ? new Date(targetDate.value + 'T00:00:00') : new Date()))
+const todayDate = computed(() => fmtDate(baseDate.value))
+const prevDate = computed(() => fmtDate(new Date(baseDate.value.getTime() - 86400000)))
 
-const COMMON_AXIS = {
-  grid: { left: 44, right: 24, top: 24, bottom: 70 },
-  dataZoom: [
-    { type: 'slider', bottom: 28, height: 16, start: 0, end: 100 },
-    { type: 'inside' }
-  ],
-  yAxis: {
-    type: 'value',
-    min: 0,
-    axisLabel: { color: '#909399' },
-    splitLine: { lineStyle: { type: 'dashed', color: '#ebeef5' } }
-  }
+const VALUE_LABEL = {
+  show: false,
+  position: 'top',
+  color: '#303133',
+  fontSize: 12,
+  formatter: (p) => (p.value === null || p.value === undefined ? '' : Math.round(p.value))
+}
+function valueLabel() {
+  return { ...VALUE_LABEL, show: showSymbol.value }
 }
 
 function render() {
   if (!chart) return
   if (mode.value === 'trend') {
-    // 多日「日均在线人数」单线趋势
     chart.setOption(
       {
-        tooltip: { trigger: 'axis', valueFormatter: (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(2)) },
-        legend: { data: ['日均在线人数'], bottom: 0, icon: 'roundRect' },
-        ...COMMON_AXIS,
+        tooltip: { trigger: 'axis', valueFormatter: (v) => (v === null || v === undefined ? '—' : Math.round(v)) },
+        legend: { data: ['活跃用户数'], bottom: 0, icon: 'roundRect' },
+        grid: { left: 44, right: 24, top: 24, bottom: 70 },
+        dataZoom: [
+          { type: 'slider', bottom: 28, height: 16, start: 0, end: 100 },
+          { type: 'inside' }
+        ],
+        yAxis: {
+          type: 'value',
+          min: 0,
+          minInterval: 1,
+          axisLabel: { color: '#909399' },
+          splitLine: { lineStyle: { type: 'dashed', color: '#ebeef5' } }
+        },
         xAxis: {
           type: 'category',
           boundaryGap: false,
@@ -114,10 +117,12 @@ function render() {
         },
         series: [
           {
-            name: '日均在线人数',
+            name: '活跃用户数',
             type: 'line',
             symbol: 'circle',
-            symbolSize: 6,
+            symbolSize: showSymbol.value ? 6 : 0,
+            showSymbol: showSymbol.value,
+            label: valueLabel(),
             data: data.values,
             itemStyle: { color: '#3b82f6' },
             lineStyle: { color: '#3b82f6', width: 2 }
@@ -128,62 +133,92 @@ function render() {
     )
     return
   }
-  // 单日内曲线：今日(实线) + 昨日(虚线)
+
+  // 区间模式：后端回传 prevLabels（虚线每点完整时刻），X 轴双行用它；对比线名为「上一周期」
+  const isRange = !!(data.prevLabels && data.prevLabels.length)
+  const series = [
+    {
+      name: '实时在线人数',
+      type: 'line',
+      showSymbol: showSymbol.value,
+      sampling: 'lttb',
+      label: valueLabel(),
+      labelLayout: { hideOverlap: true },
+      connectNulls: false,
+      data: data.today,
+      itemStyle: { color: '#3b82f6' },
+      lineStyle: { color: '#3b82f6', width: 2 }
+    },
+    {
+      name: isRange ? '上一周期' : '昨日',
+      type: 'line',
+      showSymbol: showSymbol.value,
+      sampling: 'lttb',
+      label: valueLabel(),
+      labelLayout: { hideOverlap: true },
+      data: data.prev,
+      itemStyle: { color: '#93c5fd' },
+      lineStyle: { color: '#93c5fd', width: 1.5, type: 'dashed' }
+    }
+  ]
   chart.setOption(
     {
-      tooltip: { trigger: 'axis' },
+      tooltip: { trigger: 'axis', valueFormatter: (v) => (v === null || v === undefined ? '—' : Math.round(v)) },
       legend: { data: ['实时在线人数'], bottom: 0, icon: 'roundRect' },
-      ...COMMON_AXIS,
+      grid: { left: 44, right: 24, top: 24, bottom: 70 },
+      dataZoom: [
+        { type: 'slider', bottom: 28, height: 16, start: 0, end: 100 },
+        { type: 'inside' }
+      ],
+      yAxis: {
+        type: 'value',
+        min: 0,
+        minInterval: 1,
+        axisLabel: { color: '#909399' },
+        splitLine: { lineStyle: { type: 'dashed', color: '#ebeef5' } }
+      },
       xAxis: {
         type: 'category',
         boundaryGap: false,
         data: data.labels,
         axisLine: { lineStyle: { color: '#dcdfe6' } },
-        axisLabel: { color: '#909399' }
-      },
-      series: [
-        {
-          name: '实时在线人数',
-          type: 'line',
-          showSymbol: false,
-          smooth: true,
-          connectNulls: false,
-          data: data.today,
-          itemStyle: { color: '#3b82f6' },
-          lineStyle: { color: '#3b82f6', width: 2 }
-        },
-        {
-          name: '昨日',
-          type: 'line',
-          showSymbol: false,
-          smooth: true,
-          data: data.prev,
-          itemStyle: { color: '#93c5fd' },
-          lineStyle: { color: '#93c5fd', width: 1.5, type: 'dashed' }
+        axisLabel: {
+          color: '#909399',
+          formatter: isRange
+            ? (value, index) => `${value}\n${data.prevLabels[index] || ''}`
+            : (value) => `${todayDate.value} ${value}\n${prevDate.value} ${value}`
         }
-      ]
+      },
+      series
     },
     true
   )
 }
 
-const EMPTY = { labels: [], today: [], prev: [], values: [], latest: null, latestLabel: '', mean: null, sum: null }
+const EMPTY = { labels: [], prevLabels: [], today: [], prev: [], values: [], latest: null, latestLabel: '' }
 
 async function load() {
   loading.value = true
   try {
     let res
+    const isRange = rangeStart.value && rangeEnd.value && rangeStart.value !== rangeEnd.value
     if (mode.value === 'trend') {
       const params = { dim: dim.value }
       // 仅当选了真正的多日区间时让面板控制范围；单日(默认今日)则用 dim 的默认窗口
-      if (rangeStart.value && rangeEnd.value && rangeStart.value !== rangeEnd.value) {
+      if (isRange) {
         params.start = rangeStart.value
         params.end = rangeEnd.value
       }
       res = await getOnlineTrend(params)
     } else {
       const params = { bucket: bucket.value }
-      if (targetDate.value) params.date = targetDate.value
+      if (isRange) {
+        // 多日区间：保持粒度的连续序列 + 前一等长周期 VS
+        params.start = rangeStart.value
+        params.end = rangeEnd.value
+      } else if (targetDate.value) {
+        params.date = targetDate.value
+      }
       res = await getRealtimeOnline(params)
     }
     Object.assign(data, EMPTY, res.data || {})
@@ -198,37 +233,44 @@ async function load() {
 
 function pickBucket(m) {
   granPopRef.value && granPopRef.value.hide()
-  sub.value = ''
   if (mode.value === 'intraday' && bucket.value === m) return
   mode.value = 'intraday'
   bucket.value = m
+  // 按小时仅支持单日：若之前是多日区间，收敛为结束日单日
+  if (rangeStart.value && rangeEnd.value && rangeStart.value !== rangeEnd.value) {
+    targetDate.value = rangeEnd.value
+    rangeStart.value = ''
+    rangeEnd.value = ''
+  }
   load()
 }
 
 function pickDim(d) {
   granPopRef.value && granPopRef.value.hide()
-  sub.value = ''
   if (mode.value === 'trend' && dim.value === d) return
   mode.value = 'trend'
   dim.value = d
-  load()
+  // 切换维度时的默认区间：按天=最近7天、按周=过去30天、按月=过去一年
+  const presetByDim = { day: 'recent7', week: 'past30', month: 'pastYear' }
+  if (presetByDim[d] && dateRangeRef.value) {
+    dateRangeRef.value.applyPresetAndEmit(presetByDim[d])
+  } else {
+    load()
+  }
 }
 
-// 单日：取该日作为统计日，展示日内曲线；跨多天：自动切到「按天」趋势，逐日展示所选区间数据
+// 日期面板回调：保持当前粒度——
+//   intraday(按分钟/按小时)：单日→今日+昨日VS；多日→区间连续序列+前一周期VS
+//   trend(按天/周/月)：按区间做日聚合
 function onRange({ start, end }) {
   rangeStart.value = start || ''
   rangeEnd.value = end || ''
-  if (start && end && start !== end) {
-    // 选择了超过 1 天的区间：按天展示区间内每天的数据（已选按周/按月则保留）
-    mode.value = 'trend'
-    if (dim.value !== 'week' && dim.value !== 'month') dim.value = 'day'
-  } else {
-    // 单日：回到日内曲线（今日 + 昨日）
-    mode.value = 'intraday'
-    targetDate.value = end || ''
-  }
+  // 单日时记录统计日；多日区间则交由 start/end 控制
+  targetDate.value = start && end && start === end ? end : ''
   load()
 }
+
+watch(showSymbol, render)
 
 function handleResize() {
   chart && chart.resize()
@@ -237,6 +279,7 @@ onMounted(async () => {
   await nextTick()
   chart = echarts.init(chartRef.value)
   window.addEventListener('resize', handleResize)
+  // 首次加载由 DateRangePanel 挂载时的 change 事件驱动（避免重复请求）
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
@@ -251,11 +294,25 @@ onBeforeUnmount(() => {
 .ro-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 .ro-title {
   font-size: 16px;
   font-weight: 700;
   color: #303133;
+}
+.ro-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ro-action-icon {
+  cursor: pointer;
+  color: #909399;
+  font-size: 16px;
+}
+.ro-action-icon:hover {
+  color: #409eff;
 }
 .ro-tabs {
   margin-top: 8px;
@@ -265,7 +322,8 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 .ro-tab {
-  color: #909399;
+  color: #303133;
+  font-weight: 600;
 }
 .ro-gran {
   cursor: pointer;
@@ -284,6 +342,12 @@ onBeforeUnmount(() => {
 }
 .ro-sep {
   color: #dcdfe6;
+}
+.ro-tabs-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 .ro-body {
   display: flex;
@@ -307,20 +371,6 @@ onBeforeUnmount(() => {
   font-size: 34px;
   font-weight: 700;
   line-height: 1.1;
-  color: #303133;
-}
-.ro-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-.ro-stat-label {
-  font-size: 13px;
-  color: #909399;
-}
-.ro-stat-num {
-  font-size: 20px;
-  font-weight: 600;
   color: #303133;
 }
 .ro-chart {
@@ -351,36 +401,6 @@ onBeforeUnmount(() => {
 .gm-row.active {
   color: #409eff;
   background: #ecf5ff;
-}
-.gm-arrow {
-  font-size: 12px;
-}
-.gm-sub {
-  position: absolute;
-  left: 100%;
-  top: -6px;
-  margin-left: 4px;
-  background: #fff;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  padding: 6px;
-  min-width: 96px;
-  z-index: 10;
-}
-.gm-sub-item {
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #606266;
-  border-radius: 4px;
-  white-space: nowrap;
-}
-.gm-sub-item:hover {
-  background: #f5f7fa;
-}
-.gm-sub-item.active {
-  color: #409eff;
-  font-weight: 600;
 }
 </style>
 

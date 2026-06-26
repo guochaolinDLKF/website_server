@@ -8,7 +8,7 @@
     @show="onPanelShow"
   >
     <template #reference>
-      <span class="drp-trigger">{{ committedLabel }}<i class="drp-caret">▾</i></span>
+      <span class="drp-trigger">{{ committedLabel || '选择日期范围' }}<i class="drp-caret">▾</i></span>
     </template>
 
     <div class="drp-panel">
@@ -20,19 +20,20 @@
       <div class="drp-body">
         <!-- 左侧预设 -->
         <div class="drp-presets">
-          <div v-for="(row, i) in presetRows" :key="i" class="drp-preset-row">
+          <div v-for="(row, i) in visiblePresetRows" :key="i" class="drp-preset-row">
             <button
               v-for="p in row"
               :key="p.key"
               class="drp-preset-btn"
-              :class="{ active: activePreset === p.key }"
+              :class="{ active: activePreset === p.key, disabled: isPresetDisabled(p.key) }"
+              :disabled="isPresetDisabled(p.key)"
               @click="applyPreset(p.key)"
             >
               {{ p.label }}
             </button>
           </div>
           <button
-            v-for="p in fixedPresets"
+            v-for="p in visibleFixedPresets"
             :key="p.key"
             class="drp-preset-btn drp-preset-full"
             :class="{ active: activePreset === p.key }"
@@ -42,23 +43,43 @@
           </button>
         </div>
 
-        <!-- 右侧双日历 -->
-        <div class="drp-cals">
-          <div v-for="(m, ci) in [leftMonth, rightMonth]" :key="ci" class="drp-cal">
-            <div class="drp-cal-head">
-              <span class="drp-nav" @click="shiftMonth(-1)">‹</span>
-              <span class="drp-cal-title">{{ monthTitle(m) }}</span>
-              <span class="drp-nav" @click="shiftMonth(1)">›</span>
+        <!-- 右侧：时间模式切换 + 动态输入/双日历 -->
+        <div class="drp-right">
+          <div v-if="!single" class="drp-mode-tabs">
+            <span class="drp-mode-tab" :class="{ active: timeMode === 'dynamic' }" @click="setMode('dynamic')">动态时间</span>
+            <span class="drp-mode-tab" :class="{ active: timeMode === 'static' }" @click="setMode('static')">静态时间</span>
+          </div>
+
+          <!-- 动态时间：相对今天的偏移天数（single 模式禁用） -->
+          <div v-if="!single && timeMode === 'dynamic'" class="drp-dynamic">
+            <div class="drp-dyn-row">
+              <el-input-number v-model="startOffset" :min="0" :max="3650" :controls="false" size="small" @change="onDynamicChange" />
+              <span class="drp-dyn-unit">天前</span>
+              <span class="drp-dyn-arrow">→</span>
+              <el-input-number v-model="endOffset" :min="0" :max="3650" :controls="false" size="small" @change="onDynamicChange" />
+              <span class="drp-dyn-unit">天前</span>
             </div>
-            <div class="drp-week"><span v-for="w in weekHeads" :key="w">{{ w }}</span></div>
-            <div class="drp-grid">
-              <span
-                v-for="(c, idx) in monthCells(m)"
-                :key="ci + '-' + idx"
-                class="drp-day"
-                :class="cellClass(c)"
-                @click="c && clickDay(c.date)"
-              >{{ c ? c.day : '' }}</span>
+            <div class="drp-dyn-hint">{{ slash(draftStart) }} → {{ endLabelText }}</div>
+          </div>
+
+          <!-- 静态时间：双月日历 -->
+          <div v-else class="drp-cals">
+            <div v-for="(m, ci) in [leftMonth, rightMonth]" :key="ci" class="drp-cal">
+              <div class="drp-cal-head">
+                <span class="drp-nav" @click="shiftMonth(-1)">‹</span>
+                <span class="drp-cal-title">{{ monthTitle(m) }}</span>
+                <span class="drp-nav" @click="shiftMonth(1)">›</span>
+              </div>
+              <div class="drp-week"><span v-for="w in weekHeads" :key="w">{{ w }}</span></div>
+              <div class="drp-grid">
+                <span
+                  v-for="(c, idx) in monthCells(m)"
+                  :key="ci + '-' + idx"
+                  class="drp-day"
+                  :class="cellClass(c)"
+                  @click="c && clickDay(c.date)"
+                >{{ c ? c.day : '' }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -73,12 +94,21 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 
 const props = defineProps({
-  defaultPreset: { type: String, default: 'recent30' }
+  defaultPreset: { type: String, default: 'recent30' },
+  // single=true：仅允许选择单日（用于按小时等粒度），隐藏多日预设与动态时间，日历点选即为单日
+  single: { type: Boolean, default: false },
+  // multiOnly=true：仅允许多日（用于按天/周/月趋势），禁用「昨日/今日」单日预设
+  multiOnly: { type: Boolean, default: false }
 })
 const emit = defineEmits(['change'])
+
+// 多日模式下禁用单日预设（昨日/今日）
+function isPresetDisabled(key) {
+  return props.multiOnly && (key === 'yesterday' || key === 'today')
+}
 
 /* ---- 日期工具 ---- */
 const pad = (n) => String(n).padStart(2, '0')
@@ -101,7 +131,8 @@ const presetRows = [
   [{ key: 'lastWeek', label: '上周' }, { key: 'thisWeek', label: '本周' }],
   [{ key: 'lastMonth', label: '上月' }, { key: 'thisMonth', label: '本月' }],
   [{ key: 'past7', label: '过去7天' }, { key: 'recent7', label: '最近7天' }],
-  [{ key: 'past30', label: '过去30天' }, { key: 'recent30', label: '最近30天' }]
+  [{ key: 'past30', label: '过去30天' }, { key: 'recent30', label: '最近30天' }],
+  [{ key: 'pastYear', label: '过去一年' }]
 ]
 const fixedPresets = [
   { key: 'fromToYesterday', label: '自某日至昨日' },
@@ -109,6 +140,12 @@ const fixedPresets = [
 ]
 const presetLabelMap = {}
 ;[...presetRows.flat(), ...fixedPresets].forEach((p) => (presetLabelMap[p.key] = p.label))
+
+// single 模式仅保留单日预设（昨日/今日），隐藏多日与「自某日至…」
+const visiblePresetRows = computed(() =>
+  props.single ? [[{ key: 'yesterday', label: '昨日' }, { key: 'today', label: '今日' }]] : presetRows
+)
+const visibleFixedPresets = computed(() => (props.single ? [] : fixedPresets))
 
 function presetRange(key) {
   switch (key) {
@@ -122,6 +159,7 @@ function presetRange(key) {
     case 'recent7': return [addDays(TODAY, -6), TODAY]
     case 'past30': return [addDays(TODAY, -30), addDays(TODAY, -1)]
     case 'recent30': return [addDays(TODAY, -29), TODAY]
+    case 'pastYear': return [addDays(TODAY, -365), addDays(TODAY, -1)]
     default: return [addDays(TODAY, -29), TODAY]
   }
 }
@@ -139,10 +177,24 @@ const pendingFixedEnd = ref(null)
 const leftMonth = ref(firstOfMonth(committedStart.value))
 const rightMonth = computed(() => addMonths(leftMonth.value, 1))
 
+// 时间模式：static(日历点选具体日期) | dynamic(相对今天的偏移天数)
+const timeMode = ref('static')
+const startOffset = ref(7) // 开始：N 天前
+const endOffset = ref(0) // 结束：M 天前（0=今日）
+const committedMode = ref('static')
+const committedStartOffset = ref(7)
+const committedEndOffset = ref(0)
+const endLabelText = computed(() => {
+  if (endOffset.value === 0) return '今日'
+  if (endOffset.value === 1) return '昨日'
+  return slash(draftEnd.value)
+})
+
 const popRef = ref()
 const draftLabel = computed(() => (activePreset.value ? presetLabelMap[activePreset.value] || '自定义' : '自定义'))
 
 function applyPreset(key) {
+  timeMode.value = 'static' // 预设属于静态选择
   if (key === 'fromToYesterday' || key === 'fromToToday') {
     pendingFixedEnd.value = key === 'fromToYesterday' ? addDays(TODAY, -1) : TODAY
     draftStart.value = null
@@ -159,7 +211,36 @@ function applyPreset(key) {
   leftMonth.value = firstOfMonth(r[0])
 }
 
+// 切换动态/静态时间模式
+function setMode(m) {
+  timeMode.value = m
+  if (m === 'dynamic') {
+    onDynamicChange()
+  } else {
+    leftMonth.value = firstOfMonth(draftStart.value || TODAY)
+  }
+}
+
+// 动态偏移变化：开始 N 天前、结束 M 天前 → 具体日期（保证开始不晚于结束）
+function onDynamicChange() {
+  if (startOffset.value == null) startOffset.value = 0
+  if (endOffset.value == null) endOffset.value = 0
+  if (startOffset.value < endOffset.value) {
+    endOffset.value = startOffset.value
+  }
+  draftStart.value = addDays(TODAY, -startOffset.value)
+  draftEnd.value = addDays(TODAY, -endOffset.value)
+  activePreset.value = ''
+}
+
 function clickDay(d) {
+  // single 模式：点选即为单日（start=end）
+  if (props.single) {
+    draftStart.value = d
+    draftEnd.value = d
+    activePreset.value = ''
+    return
+  }
   if (pendingFixedEnd.value) {
     if (d.getTime() <= pendingFixedEnd.value.getTime()) {
       draftStart.value = d
@@ -206,6 +287,9 @@ function cellClass(c) {
 }
 
 function onPanelShow() {
+  timeMode.value = committedMode.value
+  startOffset.value = committedStartOffset.value
+  endOffset.value = committedEndOffset.value
   draftStart.value = committedStart.value
   draftEnd.value = committedEnd.value
   activePreset.value = labelToPreset(committedLabel.value)
@@ -221,17 +305,69 @@ function cancel() {
 }
 function apply() {
   if (!draftStart.value || !draftEnd.value) return
-  committedStart.value = draftStart.value
-  committedEnd.value = draftEnd.value
-  committedLabel.value = activePreset.value
-    ? presetLabelMap[activePreset.value]
-    : `${slash(draftStart.value)} ~ ${slash(draftEnd.value)}`
+  // 保证 start <= end
+  let s = draftStart.value
+  let e = draftEnd.value
+  if (s.getTime() > e.getTime()) {
+    const t = s
+    s = e
+    e = t
+  }
+  committedStart.value = s
+  committedEnd.value = e
+  committedMode.value = timeMode.value
+  committedStartOffset.value = startOffset.value
+  committedEndOffset.value = endOffset.value
+  if (activePreset.value) {
+    committedLabel.value = presetLabelMap[activePreset.value]
+  } else if (props.single || sameDay(s, e)) {
+    committedLabel.value = slash(s) // 单日仅显示单个日期
+  } else if (timeMode.value === 'dynamic') {
+    committedLabel.value = `${slash(s)} → ${endLabelText.value}`
+  } else {
+    committedLabel.value = `${slash(s)} → ${slash(e)}`
+  }
   popRef.value && popRef.value.hide()
   emitChange()
 }
 function emitChange() {
   emit('change', { start: ymd(committedStart.value), end: ymd(committedEnd.value), label: committedLabel.value })
 }
+
+// 供父组件按粒度默认选中某预设并立即生效（如按天默认「最近7天」）
+function applyPresetAndEmit(key) {
+  applyPreset(key)
+  apply()
+}
+defineExpose({ applyPresetAndEmit })
+
+// 切到 single（如按小时）时，若已生效的是多日范围，收敛为结束日单日（仅同步展示；
+// 数据重新加载由父组件的粒度切换逻辑负责，避免重复请求）
+watch(
+  () => props.single,
+  (isSingle) => {
+    if (isSingle && !sameDay(committedStart.value, committedEnd.value)) {
+      timeMode.value = 'static'
+      committedStart.value = committedEnd.value
+      draftStart.value = committedEnd.value
+      draftEnd.value = committedEnd.value
+      activePreset.value = ''
+      committedLabel.value = slash(committedEnd.value)
+    }
+  }
+)
+
+// 切到 multiOnly（如按天/周/月）时，若已生效的是单日，清除单日选中态——
+// 趋势模式按默认窗口展示，触发器提示重新选择多日范围（不改 committed 区间，故无需重复请求）
+watch(
+  () => props.multiOnly,
+  (isMulti) => {
+    if (isMulti && sameDay(committedStart.value, committedEnd.value)) {
+      activePreset.value = ''
+      committedLabel.value = ''
+    }
+  }
+)
 
 // 挂载即抛出默认范围，驱动父组件首次加载
 onMounted(emitChange)
@@ -300,8 +436,65 @@ onMounted(emitChange)
   background: #409eff;
   border-color: #409eff;
 }
+.drp-preset-btn:disabled,
+.drp-preset-btn.disabled,
+.drp-preset-btn:disabled:hover,
+.drp-preset-btn.disabled:hover {
+  color: #c0c4cc;
+  background: #f5f7fa;
+  border-color: #e4e7ed;
+  cursor: not-allowed;
+}
 .drp-preset-full {
   width: 100%;
+}
+.drp-right {
+  flex: 1;
+  min-width: 0;
+}
+.drp-mode-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.drp-mode-tab {
+  padding: 4px 14px;
+  font-size: 13px;
+  color: #606266;
+  background: #f5f7fa;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.drp-mode-tab:hover {
+  color: #409eff;
+}
+.drp-mode-tab.active {
+  color: #fff;
+  background: #409eff;
+}
+.drp-dynamic {
+  padding: 8px 0;
+}
+.drp-dyn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.drp-dyn-row :deep(.el-input-number) {
+  width: 96px;
+}
+.drp-dyn-unit {
+  font-size: 13px;
+  color: #606266;
+}
+.drp-dyn-arrow {
+  margin: 0 4px;
+  color: #909399;
+}
+.drp-dyn-hint {
+  margin-top: 12px;
+  font-size: 13px;
+  color: #409eff;
 }
 .drp-cals {
   flex: 1;

@@ -15,13 +15,14 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 数据驾驶舱服务（读 zhouyi）。
@@ -259,13 +260,18 @@ public class DashboardService {
         return nextDayRetention(start, end);
     }
 
+    /** 新增用户次日留存（指定注册日区间 [start,end]，按天）。 */
+    public Map<String, Object> nextDayRetention(LocalDate start, LocalDate end) {
+        return nextDayRetention(start, end, "day");
+    }
+
     /**
-     * 新增用户次日留存（指定注册日区间 [start,end]）。
+     * 新增用户次日留存（指定注册日区间 [start,end]，dim=day/week/month）。
      *
      * <p>口径同 {@link #nextDayRetention(int)}；区间结束日会被收敛到「次日已完整」的最大注册日(today-2)，
-     * 若收敛后起始日晚于结束日则返回空。</p>
+     * 若收敛后起始日晚于结束日则返回空。周/月维度按加权留存率聚合：周期留存率 = 周期内 Σ次留 ÷ Σ新增 ×100。</p>
      */
-    public Map<String, Object> nextDayRetention(LocalDate start, LocalDate end) {
+    public Map<String, Object> nextDayRetention(LocalDate start, LocalDate end, String dim) {
         LocalDate maxCohort = LocalDate.now().minusDays(2);     // 次日已完整的最大注册日
         if (end == null || end.isAfter(maxCohort)) {
             end = maxCohort;
@@ -287,23 +293,55 @@ public class DashboardService {
             m.put(d, new long[]{reg, retained});
         }
 
+        // 按 dim 聚合到周期：key -> [Σreg, Σretained]
+        boolean byDay = !"week".equalsIgnoreCase(dim) && !"month".equalsIgnoreCase(dim);
+        Map<String, long[]> agg = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            long[] rr = m.get(d.toString());
+            long reg = rr != null ? rr[0] : 0L;
+            long ret = rr != null ? rr[1] : 0L;
+            String key;
+            String label;
+            LocalDate kd;
+            if ("week".equalsIgnoreCase(dim)) {
+                kd = mondayOf(d);
+                key = kd.toString();
+                label = mmdd(kd);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                kd = d.withDayOfMonth(1);
+                key = kd.toString().substring(0, 7);
+                label = key;
+            } else {
+                kd = d;
+                key = d.toString();
+                label = d.toString().substring(5).replace('-', '/');
+            }
+            long[] a = agg.computeIfAbsent(key, k -> new long[2]);
+            a[0] += reg;
+            a[1] += ret;
+            keyLabel.putIfAbsent(key, label);
+            keyDate.putIfAbsent(key, kd);
+        }
+
         List<Map<String, Object>> points = new java.util.ArrayList<>();
         BigDecimal latest = null;
         String latestLabel = "";
         BigDecimal sum = BigDecimal.ZERO;
         int validCount = 0;
-        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            long[] rr = m.get(d.toString());
+        for (Map.Entry<String, long[]> e : agg.entrySet()) {
+            long[] a = e.getValue();
             BigDecimal rate = null;
-            if (rr != null && rr[0] > 0) {
-                rate = BigDecimal.valueOf(rr[1] * 100.0 / rr[0]).setScale(2, RoundingMode.HALF_UP);
+            if (a[0] > 0) {
+                rate = BigDecimal.valueOf(a[1] * 100.0 / a[0]).setScale(2, RoundingMode.HALF_UP);
                 latest = rate;
-                latestLabel = fmtDateCn(d);
+                latestLabel = byDay ? fmtDateCn(keyDate.get(e.getKey())) : periodLabel(dim, keyDate.get(e.getKey()));
                 sum = sum.add(rate);
                 validCount++;
             }
             Map<String, Object> p = new LinkedHashMap<>();
-            p.put("label", d.toString().substring(5).replace('-', '/'));
+            p.put("label", keyLabel.get(e.getKey()));
             p.put("value", rate);
             points.add(p);
         }
@@ -336,7 +374,7 @@ public class DashboardService {
      * 人均在线时长 / 人均启动次数（最近 N 天窗口，按 dim 聚合）。
      *
      * <p>未指定区间时按 dim 取默认窗口：day=最近 days 天、week=近 12 周、month=近 12 个月，
-     * 与「日均在线人数趋势」保持一致。</p>
+     * 与「活跃用户趋势」保持一致。</p>
      */
     public Map<String, Object> onlineStats(int days, String dim) {
         LocalDate end = LocalDate.now().minusDays(1);     // 昨日：最后一个完整自然日
@@ -485,6 +523,124 @@ public class DashboardService {
         return data;
     }
 
+    /**
+     * 实时在线人数（区间连续序列，保持 bucket 粒度，与前一等长周期 VS）。
+     *
+     * <p>实线 = [start,end] 闭区间内每个 bucket 时间点的在线人数（连续多天，不做日聚合）；
+     * 虚线 = 往前平移一个等长周期 [start-N, end-N] 的同位置点，用于同比对比。
+     * 若区间含今日，今日当前时刻之后的点置 null。</p>
+     *
+     * @param start         区间起始日
+     * @param end           区间结束日
+     * @param bucketMinutes 分桶粒度：1/5/10/60 分钟（其它值按 5 处理）
+     */
+    public Map<String, Object> realtimeOnlineRange(LocalDate start, LocalDate end, int bucketMinutes) {
+        int bucket = (bucketMinutes == 1 || bucketMinutes == 10 || bucketMinutes == 60) ? bucketMinutes : 5;
+        int slotsPerDay = 1440 / bucket;
+        long days = end.toEpochDay() - start.toEpochDay() + 1;
+        // 防御：区间过大时收敛到最近 92 天，避免点数与计算量爆炸
+        if (days > 92) {
+            start = end.minusDays(91);
+            days = 92;
+        }
+        int slots = (int) (days * slotsPerDay);
+
+        long[] curCounts = rangeOnlineCounts(start, end, bucket, slots);
+        LocalDate prevStart = start.minusDays(days);
+        LocalDate prevEnd = end.minusDays(days);
+        long[] prevCounts = rangeOnlineCounts(prevStart, prevEnd, bucket, slots);
+
+        LocalDateTime rangeStart = start.atStartOfDay();
+        LocalDateTime prevRangeStart = prevStart.atStartOfDay();
+        // 截断未来：区间含今日时，超过当前时刻的点不展示
+        int curLast = slots - 1;
+        if (!end.isBefore(LocalDate.now())) {
+            long nowMin = Duration.between(rangeStart, LocalDateTime.now()).toMinutes();
+            curLast = (int) Math.max(0, Math.min(slots - 1, nowMin / bucket));
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<String> prevLabels = new ArrayList<>();
+        List<Long> today = new ArrayList<>();
+        List<Long> prev = new ArrayList<>();
+        long sum = 0;
+        int cnt = 0;
+        long latestVal = 0;
+        String latestLabel = "";
+        for (int k = 0; k < slots; k++) {
+            labels.add(slotLabelAt(rangeStart, k, bucket));
+            prevLabels.add(slotLabelAt(prevRangeStart, k, bucket));
+            prev.add(prevCounts[k]);
+            if (k <= curLast) {
+                today.add(curCounts[k]);
+                sum += curCounts[k];
+                cnt++;
+                latestVal = curCounts[k];
+                latestLabel = slotLabelAt(rangeStart, k, bucket);
+            } else {
+                today.add(null);
+            }
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("bucket", bucket);
+        data.put("range", true);
+        data.put("labels", labels);
+        data.put("prevLabels", prevLabels);
+        data.put("today", today);
+        data.put("prev", prev);
+        data.put("latest", latestVal);
+        data.put("latestLabel", latestLabel);
+        data.put("mean", cnt == 0 ? null : BigDecimal.valueOf((double) sum / cnt).setScale(2, RoundingMode.HALF_UP));
+        data.put("sum", sum);
+        return data;
+    }
+
+    /** 计算 [start,end] 闭区间内，每个 bucket 分钟时间点上的在线人数（连续多天，dayOnlineCounts 的区间推广） */
+    private long[] rangeOnlineCounts(LocalDate start, LocalDate end, int bucket, int slots) {
+        LocalDateTime rangeStart = start.atStartOfDay();
+        // 向前多取 20 分钟：跨区间起点零点的活跃用户在起点附近仍算在线
+        List<Map<String, Object>> rows = dashboardMapper.eventStream(
+                rangeStart.minusMinutes(SESSION_GAP_MINUTES), end.plusDays(1).atStartOfDay());
+
+        Map<String, List<LocalDateTime>> grp = new LinkedHashMap<>();
+        for (Map<String, Object> r : rows) {
+            Object uid = r.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            grp.computeIfAbsent(String.valueOf(uid), k -> new ArrayList<>()).add(toLdt(r.get("t")));
+        }
+
+        long[] counts = new long[slots];
+        java.util.BitSet present = new java.util.BitSet(slots);
+        for (List<LocalDateTime> ts : grp.values()) {
+            present.clear();
+            for (LocalDateTime t : ts) {
+                long eMin = Duration.between(rangeStart, t).toMinutes();   // 距区间起点分钟数，可为负
+                int kStart = (int) Math.ceil((double) eMin / bucket);
+                if (kStart < 0) {
+                    kStart = 0;
+                }
+                // 在线区间 [e, e+20min)：覆盖的时间点
+                for (int k = kStart; k < slots && (long) k * bucket < eMin + SESSION_GAP_MINUTES; k++) {
+                    present.set(k);
+                }
+            }
+            for (int k = present.nextSetBit(0); k >= 0; k = present.nextSetBit(k + 1)) {
+                counts[k]++;
+            }
+        }
+        return counts;
+    }
+
+    /** 绝对时刻标签：base + k*bucket 分钟 → "yyyy-MM-dd HH:mm" */
+    private String slotLabelAt(LocalDateTime base, int k, int bucket) {
+        LocalDateTime t = base.plusMinutes((long) Math.max(0, k) * bucket);
+        return String.format("%04d-%02d-%02d %02d:%02d",
+                t.getYear(), t.getMonthValue(), t.getDayOfMonth(), t.getHour(), t.getMinute());
+    }
+
     /** 计算某天各 bucket 分钟时间点上的在线人数 */
     private long[] dayOnlineCounts(LocalDate day, int bucket, int slots) {
         LocalDateTime dayStart = day.atStartOfDay();
@@ -529,13 +685,10 @@ public class DashboardService {
         return String.format("%02d:%02d", m / 60, m % 60);
     }
 
-    /** 一天 5 分钟槽位数 */
-    private static final double SLOTS_OF_DAY = 1440.0 / 5;
-
     /**
-     * 在线人数趋势（日均在线人数，按 天/周/月 聚合）。
+     * 活跃用户趋势（按 天/周/月 去重活跃用户数：DAU/WAU/MAU）。
      *
-     * <p>日均在线人数 = 当日各 5 分钟时间点在线人数的平均值；周/月取其所含各日日均的平均。
+     * <p>口径：周期内有任意行为事件的去重用户数。按天=当日 DAU、按周=当周 WAU、按月=当月 MAU，均为整数。
      * 截至昨日（today-1）的完整周期。day=近30天、week=近12周、month=近12个月。</p>
      *
      * @param dim day | week | month
@@ -575,14 +728,13 @@ public class DashboardService {
             return empty;
         }
 
-        Map<LocalDate, Long> daySum = computeDailyOnline(start, end);
+        Map<LocalDate, Set<String>> dayUsers = computeDailyActiveUsers(start, end);
 
-        // 聚合到周期：key -> [日均之和, 天数]
-        Map<String, double[]> agg = new LinkedHashMap<>();
+        // 聚合到周期：key -> 周期内去重活跃用户集合（按天=DAU、按周=WAU、按月=MAU）
+        Map<String, Set<String>> agg = new LinkedHashMap<>();
         Map<String, String> keyLabel = new LinkedHashMap<>();
         Map<String, LocalDate> keyDate = new LinkedHashMap<>();
         for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
-            double dayAvg = daySum.getOrDefault(d, 0L) / SLOTS_OF_DAY;
             String key;
             String label;
             LocalDate kd;
@@ -599,24 +751,21 @@ public class DashboardService {
                 key = d.toString();
                 label = mmdd(d);
             }
-            double[] a = agg.computeIfAbsent(key, k -> new double[2]);
-            a[0] += dayAvg;
-            a[1] += 1;
+            agg.computeIfAbsent(key, k -> new HashSet<>()).addAll(dayUsers.getOrDefault(d, Collections.emptySet()));
             keyLabel.putIfAbsent(key, label);
             keyDate.putIfAbsent(key, kd);
         }
 
         List<String> labels = new ArrayList<>();
-        List<BigDecimal> values = new ArrayList<>();
-        BigDecimal sum = BigDecimal.ZERO;
-        BigDecimal latest = null;
+        List<Long> values = new ArrayList<>();
+        long sum = 0;
+        Long latest = null;
         String latestLabel = "";
-        for (Map.Entry<String, double[]> e : agg.entrySet()) {
-            double[] a = e.getValue();
-            BigDecimal v = BigDecimal.valueOf(a[1] == 0 ? 0 : a[0] / a[1]).setScale(2, RoundingMode.HALF_UP);
+        for (Map.Entry<String, Set<String>> e : agg.entrySet()) {
+            long v = e.getValue().size();
             labels.add(keyLabel.get(e.getKey()));
             values.add(v);
-            sum = sum.add(v);
+            sum += v;
             latest = v;
             latestLabel = periodLabel(dim, keyDate.get(e.getKey()));
         }
@@ -626,44 +775,29 @@ public class DashboardService {
         data.put("values", values);
         data.put("latest", latest);
         data.put("latestLabel", latestLabel);
-        data.put("mean", labels.isEmpty() ? null : sum.divide(BigDecimal.valueOf(labels.size()), 2, RoundingMode.HALF_UP));
-        data.put("sum", sum.setScale(2, RoundingMode.HALF_UP));
+        data.put("mean", labels.isEmpty() ? null : BigDecimal.valueOf((double) sum / labels.size()).setScale(2, RoundingMode.HALF_UP));
+        data.put("sum", sum);
         return data;
     }
 
-    /** 计算区间内每天的「在线人数总和」（= 当日各 5 分钟点在线人数之和，用于求日均） */
-    private Map<LocalDate, Long> computeDailyOnline(LocalDate start, LocalDate end) {
+    /** 计算区间内每天的「活跃用户集合」（当天有任意行为事件的去重用户，用于 DAU/WAU/MAU） */
+    private Map<LocalDate, Set<String>> computeDailyActiveUsers(LocalDate start, LocalDate end) {
         List<Map<String, Object>> rows = dashboardMapper.eventStream(
-                start.atStartOfDay().minusMinutes(SESSION_GAP_MINUTES), end.plusDays(1).atStartOfDay());
+                start.atStartOfDay(), end.plusDays(1).atStartOfDay());
 
-        Map<String, List<LocalDateTime>> grp = new LinkedHashMap<>();
+        Map<LocalDate, Set<String>> dayUsers = new HashMap<>();
         for (Map<String, Object> r : rows) {
             Object uid = r.get("uid");
             if (uid == null) {
                 continue;
             }
-            grp.computeIfAbsent(String.valueOf(uid), k -> new ArrayList<>()).add(toLdt(r.get("t")));
-        }
-
-        Map<LocalDate, Long> daySum = new HashMap<>();
-        for (List<LocalDateTime> ts : grp.values()) {
-            // 该用户在线覆盖的「绝对 5 分钟刻度」(分钟数)，去重
-            HashSet<Long> marks = new HashSet<>();
-            for (LocalDateTime t : ts) {
-                long base = t.toEpochSecond(ZoneOffset.UTC) / 60;
-                long first = (base % 5 == 0) ? base : (base / 5 + 1) * 5;
-                for (long mk = first; mk < base + SESSION_GAP_MINUTES; mk += 5) {
-                    marks.add(mk);
-                }
+            LocalDate d = toLdt(r.get("t")).toLocalDate();
+            if (d.isBefore(start) || d.isAfter(end)) {
+                continue;
             }
-            for (long mk : marks) {
-                LocalDate day = LocalDateTime.ofEpochSecond(mk * 60, 0, ZoneOffset.UTC).toLocalDate();
-                if (!day.isBefore(start) && !day.isAfter(end)) {
-                    daySum.merge(day, 1L, Long::sum);
-                }
-            }
+            dayUsers.computeIfAbsent(d, k -> new HashSet<>()).add(String.valueOf(uid));
         }
-        return daySum;
+        return dayUsers;
     }
 
     private LocalDate mondayOf(LocalDate d) {
@@ -707,6 +841,70 @@ public class DashboardService {
         s.put("latestLabel", fmtDateCn(end));
         s.put("dod", pctBd(latest, map.get(end.minusDays(1))));
         s.put("wow", pctBd(latest, map.get(end.minusDays(7))));
+        s.put("mean", cnt == 0 ? null : sum.divide(BigDecimal.valueOf(cnt), 2, RoundingMode.HALF_UP));
+        s.put("sum", sum.setScale(2, RoundingMode.HALF_UP));
+        return s;
+    }
+
+    /** 把每日值按 dim 聚合为前端折线序列 + 汇总；day 维度额外提供 dod/wow，week/month 该两项为 null */
+    private Map<String, Object> buildSeries(Map<LocalDate, BigDecimal> map, LocalDate start, LocalDate end, String dim) {
+        if ("day".equalsIgnoreCase(dim)) {
+            return buildDailySeries(map, start, end);
+        }
+
+        Map<String, BigDecimal[]> agg = new LinkedHashMap<>();   // key -> [sum, count]
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            BigDecimal v = map.get(d);
+            if (v == null) {
+                continue;
+            }
+            String key;
+            String label;
+            LocalDate kd;
+            if ("week".equalsIgnoreCase(dim)) {
+                kd = mondayOf(d);
+                key = kd.toString();
+                label = mmdd(kd);
+            } else {
+                kd = d.withDayOfMonth(1);
+                key = kd.toString().substring(0, 7);
+                label = key;
+            }
+            BigDecimal[] a = agg.computeIfAbsent(key, k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+            a[0] = a[0].add(v);
+            a[1] = a[1].add(BigDecimal.ONE);
+            keyLabel.putIfAbsent(key, label);
+            keyDate.putIfAbsent(key, kd);
+        }
+
+        List<Map<String, Object>> points = new ArrayList<>();
+        BigDecimal sum = BigDecimal.ZERO;
+        BigDecimal latest = null;
+        String latestLabel = "";
+        int cnt = 0;
+        for (Map.Entry<String, BigDecimal[]> e : agg.entrySet()) {
+            BigDecimal[] a = e.getValue();
+            BigDecimal v = a[1].compareTo(BigDecimal.ZERO) == 0
+                    ? BigDecimal.ZERO
+                    : a[0].divide(a[1], 2, RoundingMode.HALF_UP);
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("label", keyLabel.get(e.getKey()));
+            p.put("value", v);
+            points.add(p);
+            sum = sum.add(v);
+            latest = v;
+            latestLabel = periodLabel(dim, keyDate.get(e.getKey()));
+            cnt++;
+        }
+
+        Map<String, Object> s = new LinkedHashMap<>();
+        s.put("points", points);
+        s.put("latest", latest);
+        s.put("latestLabel", latestLabel);
+        s.put("dod", null);
+        s.put("wow", null);
         s.put("mean", cnt == 0 ? null : sum.divide(BigDecimal.valueOf(cnt), 2, RoundingMode.HALF_UP));
         s.put("sum", sum.setScale(2, RoundingMode.HALF_UP));
         return s;

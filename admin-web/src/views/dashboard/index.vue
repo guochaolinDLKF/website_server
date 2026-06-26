@@ -40,6 +40,7 @@
           :days="30"
           :value-decimals="1"
           :show-mean-sum="true"
+          :filterable="true"
         />
       </el-col>
       <el-col :xs="24" :md="12">
@@ -55,11 +56,6 @@
       </el-col>
     </el-row>
 
-    <el-row :gutter="16" style="margin-top: 16px">
-      <el-col :span="24">
-        <RealtimeOnlineCard />
-      </el-col>
-    </el-row>
   </div>
 </template>
 
@@ -68,7 +64,6 @@ import { ref, reactive, onMounted } from 'vue'
 import { getPlayerStats } from '@/api/dashboard'
 import RetentionCard from './RetentionCard.vue'
 import MetricTrendCard from './MetricTrendCard.vue'
-import RealtimeOnlineCard from './RealtimeOnlineCard.vue'
 
 const stats = reactive({})
 

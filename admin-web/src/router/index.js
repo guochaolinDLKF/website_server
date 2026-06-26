@@ -63,9 +63,7 @@ export const routes = [
     path: '/analytics',
     component: Layout,
     children: [
-      { path: '/analytics/user', name: 'AnalyticsUser', component: () => import('@/views/operation/analytics/user.vue'), meta: { title: '用户分析', perm: 'analytics:user' } },
-      { path: '/analytics/income', name: 'AnalyticsIncome', component: () => import('@/views/operation/analytics/income.vue'), meta: { title: '收入分析', perm: 'analytics:income' } },
-      { path: '/analytics/func', name: 'AnalyticsFunc', component: () => import('@/views/operation/analytics/func.vue'), meta: { title: '功能分析', perm: 'analytics:func' } }
+      { path: '/analytics/realtime', name: 'AnalyticsRealtime', component: () => import('@/views/operation/analytics/realtime.vue'), meta: { title: '实时数据', perm: 'analytics:realtime' } }
     ]
   },
   {

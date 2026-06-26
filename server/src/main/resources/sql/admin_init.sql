@@ -172,9 +172,7 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  (28,'benefit:list','权益管理',1,20,'/order/benefit','',4),
  (29,'payfail:list','支付异常监控',1,20,'/order/payment-failure','',5),
  -- 数据分析
- (36,'analytics:user'  ,'用户分析',1,35,'/analytics/user','',1),
- (37,'analytics:income','收入分析',1,35,'/analytics/income','',2),
- (38,'analytics:func'  ,'功能分析',1,35,'/analytics/func','',3),
+ (39,'analytics:realtime','实时数据',1,35,'/analytics/realtime','',1),
  -- 系统管理
  (41,'admin:list'     ,'管理员管理',1,40,'/system/admin','',1),
  (42,'admin:edit'     ,'编辑管理员',2,41,'','',1),
@@ -210,5 +208,12 @@ DELETE FROM `admin_role_permission`
    WHERE `permission_code` IN ('permission:tree','config:list','config:edit')) t);
 DELETE FROM `admin_permission`
  WHERE `permission_code` IN ('permission:tree','config:list','config:edit');
+
+-- 清理：移除已下线的「用户分析」「收入分析」「功能分析」菜单及其授权（对历史库幂等生效）。
+DELETE FROM `admin_role_permission`
+ WHERE `permission_id` IN (SELECT id FROM (SELECT id FROM `admin_permission`
+   WHERE `permission_code` IN ('analytics:user','analytics:income','analytics:func')) t);
+DELETE FROM `admin_permission`
+ WHERE `permission_code` IN ('analytics:user','analytics:income','analytics:func');
 
 -- 其余角色的权限可在「角色管理」中按需分配（此处不预置，避免与运营实际策略冲突）。

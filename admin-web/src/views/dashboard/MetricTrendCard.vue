@@ -6,9 +6,26 @@
     </div>
     <!-- 维度标签 -->
     <div class="mt-tabs">
-      <span class="mt-tab">按天</span>
-      <span class="mt-sep">|</span>
-      <span class="mt-tab active">{{ rangeText }}</span>
+      <template v-if="filterable">
+        <!-- 统计粒度菜单 -->
+        <el-popover ref="granPopRef" trigger="click" placement="bottom-start" :width="120" popper-class="gm-pop">
+          <template #reference>
+            <span class="mt-tab mt-gran">{{ granLabel }}<i class="mt-caret">▾</i></span>
+          </template>
+          <div class="gm-menu">
+            <div class="gm-row" :class="{ active: dim === 'day' }" @click="pickDim('day')">按天</div>
+            <div class="gm-row" :class="{ active: dim === 'week' }" @click="pickDim('week')">按周</div>
+            <div class="gm-row" :class="{ active: dim === 'month' }" @click="pickDim('month')">按月</div>
+          </div>
+        </el-popover>
+        <span class="mt-sep">|</span>
+        <DateRangePanel ref="dateRangeRef" default-preset="recent7" multi-only @change="onRange" />
+      </template>
+      <template v-else>
+        <span class="mt-tab">按天</span>
+        <span class="mt-sep">|</span>
+        <span class="mt-tab active">{{ rangeText }}</span>
+      </template>
     </div>
 
     <div class="mt-body" v-loading="loading">
@@ -42,6 +59,7 @@
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import { getOnlineStats } from '@/api/dashboard'
+import DateRangePanel from './DateRangePanel.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -52,13 +70,23 @@ const props = defineProps({
   seriesName: { type: String, default: '' },
   unit: { type: String, default: '' },
   valueDecimals: { type: Number, default: 2 }, // 最新大数字保留小数位
-  showMeanSum: { type: Boolean, default: false }
+  showMeanSum: { type: Boolean, default: false },
+  // filterable=true：启用「按天/周/月」粒度菜单 + 日期范围筛选；否则维持固定 days
+  filterable: { type: Boolean, default: false }
 })
 
 const loading = ref(false)
 const s = reactive({ points: [], latest: null, latestLabel: '', dod: null, wow: null, mean: null, sum: null })
 const chartRef = ref()
+const granPopRef = ref()
+const dateRangeRef = ref()
 let chart
+
+const dim = ref('day') // 统计维度：day/week/month
+const rangeStart = ref('')
+const rangeEnd = ref('')
+const DIM_LABEL = { day: '按天', week: '按周', month: '按月' }
+const granLabel = computed(() => DIM_LABEL[dim.value])
 
 function fmtVal(v) {
   if (v === null || v === undefined) return '—'
@@ -150,7 +178,11 @@ function render() {
 async function load() {
   loading.value = true
   try {
-    const res = await getOnlineStats({ days: props.days })
+    const params =
+      props.filterable && rangeStart.value && rangeEnd.value
+        ? { start: rangeStart.value, end: rangeEnd.value, dim: dim.value }
+        : { days: props.days }
+    const res = await getOnlineStats(params)
     const series = (res.data && res.data[props.metric]) || {}
     Object.assign(s, { points: [], latest: null, latestLabel: '', dod: null, wow: null, mean: null, sum: null }, series)
     await nextTick()
@@ -162,6 +194,21 @@ async function load() {
   }
 }
 
+// 各维度默认区间：按天=最近7天、按周=过去30天、按月=过去一年
+const presetByDim = { day: 'recent7', week: 'past30', month: 'pastYear' }
+function pickDim(d) {
+  granPopRef.value && granPopRef.value.hide()
+  if (dim.value === d) return
+  dim.value = d
+  dateRangeRef.value && dateRangeRef.value.applyPresetAndEmit(presetByDim[d])
+}
+
+function onRange({ start, end }) {
+  rangeStart.value = start || ''
+  rangeEnd.value = end || ''
+  load()
+}
+
 function handleResize() {
   chart && chart.resize()
 }
@@ -169,7 +216,8 @@ onMounted(async () => {
   await nextTick()
   chart = echarts.init(chartRef.value)
   window.addEventListener('resize', handleResize)
-  load()
+  // filterable 模式由 DateRangePanel 挂载时的 change 事件驱动首次加载；否则按固定 days 加载
+  if (!props.filterable) load()
 })
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
@@ -203,6 +251,21 @@ onBeforeUnmount(() => {
 .mt-tab.active {
   color: #303133;
   font-weight: 600;
+}
+.mt-gran {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  color: #303133;
+  font-weight: 600;
+}
+.mt-gran:hover {
+  color: #409eff;
+}
+.mt-caret {
+  margin-left: 2px;
+  font-size: 10px;
+  font-style: normal;
 }
 .mt-sep {
   color: #dcdfe6;
@@ -274,5 +337,33 @@ onBeforeUnmount(() => {
   height: 280px;
   width: 100%;
   margin-top: 8px;
+}
+
+/* 统计粒度菜单 */
+.gm-menu {
+  display: flex;
+  flex-direction: column;
+}
+.gm-row {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: #606266;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.gm-row:hover {
+  background: #f5f7fa;
+}
+.gm-row.active {
+  color: #409eff;
+  background: #ecf5ff;
+}
+</style>
+
+<style>
+.gm-pop.el-popover.el-popper {
+  padding: 6px;
 }
 </style>

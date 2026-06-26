@@ -63,39 +63,49 @@ public class DashboardController {
         return Result.success(dashboardService.activeData(type));
     }
 
-    @Operation(summary = "新增用户次日留存（按注册日区间，或最近 N 个注册日）")
+    @Operation(summary = "新增用户次日留存（按注册日区间，dim=day/week/month；或最近 N 个注册日）")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/retention")
     public Result<Map<String, Object>> retention(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "day") String dim,
             @RequestParam(defaultValue = "30") int days) {
         if (start != null && end != null) {
-            return Result.success(dashboardService.nextDayRetention(start, end));
+            return Result.success(dashboardService.nextDayRetention(start, end, dim));
         }
         return Result.success(dashboardService.nextDayRetention(days));
     }
 
-    @Operation(summary = "人均在线时长/启动次数（按天，含日环比同比、均值总和）")
+    @Operation(summary = "人均在线时长/启动次数（dim=day/week/month，含日环比同比、均值总和）")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/online-stats")
     public Result<Map<String, Object>> onlineStats(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "day") String dim,
             @RequestParam(defaultValue = "30") int days) {
         if (start != null && end != null) {
-            return Result.success(dashboardService.onlineStats(start, end));
+            return Result.success(dashboardService.onlineStats(start, end, dim));
         }
-        return Result.success(dashboardService.onlineStats(days));
+        return Result.success(dashboardService.onlineStats(days, dim));
     }
 
-    @Operation(summary = "实时在线人数（按5分钟，今日+昨日VS）")
+    @Operation(summary = "实时在线人数（单日今日+昨日VS；传 start/end 跨多日则区间连续+前一周期VS）")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/realtime-online")
     public Result<Map<String, Object>> realtimeOnline(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(defaultValue = "5") int bucket) {
-        return Result.success(dashboardService.realtimeOnline(date, bucket));
+        // 选了真正的多日区间：返回区间连续序列（保持粒度）+ 前一等长周期 VS
+        if (start != null && end != null && !start.isEqual(end)) {
+            return Result.success(dashboardService.realtimeOnlineRange(start, end, bucket));
+        }
+        // 单日：优先 date，其次 end（面板选单日时回传的是 end）
+        LocalDate day = date != null ? date : end;
+        return Result.success(dashboardService.realtimeOnline(day, bucket));
     }
 
     @Operation(summary = "日均在线人数趋势（dim=day/week/month）")
