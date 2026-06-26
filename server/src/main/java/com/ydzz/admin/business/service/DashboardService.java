@@ -158,6 +158,64 @@ public class DashboardService {
                 .divide(base, 2, RoundingMode.HALF_UP);
     }
 
+    /**
+     * 付费概况：付费金额 / 付费人数 / 付费率 / 人均贡献金额(ARPU)，各含日环比、周同比。
+     *
+     * <p>口径与玩家概览一致——「当日 00:00 ~ 当前时刻」等长窗口对比（日环比 vs 昨日同时段，周同比 vs 上周同日同时段）。
+     * 付费率 = 付费人数 ÷ 活跃人数(DAU) ×100；
+     * ARPU = 「充值成功」支付金额总和 ÷ 「账号登录」(user_login) 触发去重用户数。</p>
+     */
+    public Map<String, Object> payOverview() {
+        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime todayStart = today.atStartOfDay();
+        LocalDateTime yestStart = today.minusDays(1).atStartOfDay();
+        LocalDateTime yestNow = now.minusDays(1);
+        LocalDateTime weekAgoStart = today.minusDays(7).atStartOfDay();
+        LocalDateTime weekAgoNow = now.minusDays(7);
+
+        BigDecimal amtT = nullSafe(dashboardMapper.sumIncomeRange(todayStart, now));
+        BigDecimal amtY = nullSafe(dashboardMapper.sumIncomeRange(yestStart, yestNow));
+        BigDecimal amtW = nullSafe(dashboardMapper.sumIncomeRange(weekAgoStart, weekAgoNow));
+
+        long payT = nullSafe(dashboardMapper.countPayUsers(todayStart, now));
+        long payY = nullSafe(dashboardMapper.countPayUsers(yestStart, yestNow));
+        long payW = nullSafe(dashboardMapper.countPayUsers(weekAgoStart, weekAgoNow));
+
+        long actT = nullSafe(dashboardMapper.activeCount(todayStart, now));
+        long actY = nullSafe(dashboardMapper.activeCount(yestStart, yestNow));
+        long actW = nullSafe(dashboardMapper.activeCount(weekAgoStart, weekAgoNow));
+
+        // ARPU 分母：「账号登录」(user_login) 触发去重用户数
+        long lgnT = nullSafe(dashboardMapper.loginUserCount(todayStart, now));
+        long lgnY = nullSafe(dashboardMapper.loginUserCount(yestStart, yestNow));
+        long lgnW = nullSafe(dashboardMapper.loginUserCount(weekAgoStart, weekAgoNow));
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("payAmount", metricMoney(amtT, amtY, amtW));
+        data.put("payUsers", metric(payT, payY, payW));
+        data.put("payRate", metricMoney(payRate(payT, actT), payRate(payY, actY), payRate(payW, actW)));
+        // ARPU = 「充值成功」支付金额总和 ÷ 「账号登录」触发用户数
+        data.put("arpu", metricMoney(arpu(amtT, lgnT), arpu(amtY, lgnY), arpu(amtW, lgnW)));
+        return data;
+    }
+
+    /** 付费率 = 付费人数 ÷ 活跃人数 ×100（2 位小数）；活跃为 0 返回 0 */
+    private BigDecimal payRate(long part, long total) {
+        if (total <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(part * 100.0 / total).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** ARPU = 付费金额 ÷ 活跃人数（2 位小数）；活跃为 0 返回 0 */
+    private BigDecimal arpu(BigDecimal amount, long total) {
+        if (total <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return amount.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+    }
+
     public List<Map<String, Object>> userTrend(int days) {
         return dashboardMapper.userTrend(startOf(days));
     }
@@ -1164,6 +1222,275 @@ public class DashboardService {
         data.put("latestLabel", latestLabel);
         data.put("mean", labels.isEmpty() ? null : money(sum / labels.size()));
         data.put("sum", money(sum));
+        return data;
+    }
+
+    /* ==================== 新增数据（新增玩家 / 新增设备 数量及占比） ==================== */
+
+    /** 趋势类「新增数据」起止日：end 默认今日（新增按累计口径，含当天），start 默认按 dim 给窗口。 */
+    private LocalDate[] newDataRange(String dim, LocalDate start, LocalDate end) {
+        LocalDate maxDay = LocalDate.now();
+        if (end == null || end.isAfter(maxDay)) {
+            end = maxDay;
+        }
+        if (start == null) {
+            if ("week".equalsIgnoreCase(dim)) {
+                start = mondayOf(end).minusWeeks(11);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                start = end.withDayOfMonth(1).minusMonths(11);
+            } else {
+                start = end.minusDays(29);
+            }
+        }
+        return new LocalDate[]{start, end};
+    }
+
+    /** 新增数据空壳结构（labels/bars/ratios + 汇总）。 */
+    private Map<String, Object> emptyNewData(String dim) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        data.put("labels", new ArrayList<>());
+        data.put("bars", new ArrayList<>());
+        data.put("ratios", new ArrayList<>());
+        data.put("barLatest", null);
+        data.put("ratioLatest", null);
+        data.put("latestLabel", "");
+        data.put("barSum", null);
+        data.put("barMean", null);
+        return data;
+    }
+
+    /** 周期 key/label/起始日（day/week/month），返回 [key, label, keyDateIso]。 */
+    private Object[] bucketOf(String dim, LocalDate d) {
+        if ("week".equalsIgnoreCase(dim)) {
+            LocalDate kd = mondayOf(d);
+            return new Object[]{kd.toString(), mmdd(kd), kd};
+        }
+        if ("month".equalsIgnoreCase(dim)) {
+            LocalDate kd = d.withDayOfMonth(1);
+            return new Object[]{kd.toString().substring(0, 7), kd.toString().substring(0, 7), kd};
+        }
+        return new Object[]{d.toString(), mmdd(d), d};
+    }
+
+    /**
+     * 新增玩家数量及占比（按 天/周/月）。
+     *
+     * <p>bar=周期新增玩家数（user.createTime 落桶求和）；
+     * line=新增玩家占比=周期新增玩家 ÷ 周期去重活跃(DAU/WAU/MAU) ×100。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> newPlayersTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = emptyNewData(dim);
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        Map<LocalDate, Long> dayNew = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.newUserDailyCount(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            dayNew.put(LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10)), ((Number) row.get("c")).longValue());
+        }
+        Map<LocalDate, Set<String>> dayActive = computeDailyActiveUsers(start, end);
+
+        Map<String, Long> newAgg = new LinkedHashMap<>();
+        Map<String, Set<String>> activeAgg = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            newAgg.merge(key, dayNew.getOrDefault(d, 0L), Long::sum);
+            activeAgg.computeIfAbsent(key, k -> new HashSet<>()).addAll(dayActive.getOrDefault(d, Collections.emptySet()));
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> bars = new ArrayList<>();
+        List<BigDecimal> ratios = new ArrayList<>();
+        long barSum = 0;
+        Long barLatest = null;
+        BigDecimal ratioLatest = null;
+        String latestLabel = "";
+        for (String key : newAgg.keySet()) {
+            long nv = newAgg.get(key);
+            long active = activeAgg.get(key).size();
+            BigDecimal ratio = active > 0 ? BigDecimal.valueOf(nv * 100.0 / active).setScale(2, RoundingMode.HALF_UP) : null;
+            labels.add(keyLabel.get(key));
+            bars.add(nv);
+            ratios.add(ratio);
+            barSum += nv;
+            barLatest = nv;
+            ratioLatest = ratio;
+            latestLabel = periodLabel(dim, keyDate.get(key));
+        }
+        data.put("labels", labels);
+        data.put("bars", bars);
+        data.put("ratios", ratios);
+        data.put("barLatest", barLatest);
+        data.put("ratioLatest", ratioLatest);
+        data.put("latestLabel", latestLabel);
+        data.put("barSum", barSum);
+        data.put("barMean", labels.isEmpty() ? null : BigDecimal.valueOf((double) barSum / labels.size()).setScale(2, RoundingMode.HALF_UP));
+        return data;
+    }
+
+    /**
+     * 新增设备数量及占比（按 天/周/月）。
+     *
+     * <p>设备=custom_event_property 中 device_model+device_os 组合去重；首次出现日落桶为「新增设备」。
+     * bar=周期新增（激活）设备数；line=新增设备占比=周期新增设备 ÷ 截至周期末累计设备数 ×100。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> newDevicesTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = emptyNewData(dim);
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        // 全量设备首次出现日（型号|系统 去重）
+        List<LocalDate> firstDates = new ArrayList<>();
+        for (Map<String, Object> row : dashboardMapper.deviceFirstSeenTimes()) {
+            Object t = row.get("firstTime");
+            if (t != null) {
+                firstDates.add(toLdt(t).toLocalDate());
+            }
+        }
+        Map<LocalDate, Long> dayNew = new HashMap<>();
+        for (LocalDate fd : firstDates) {
+            dayNew.merge(fd, 1L, Long::sum);
+        }
+
+        Map<String, Long> newAgg = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        Map<String, LocalDate> keyEnd = new LinkedHashMap<>();   // 周期内最后一天（在区间内）
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            newAgg.merge(key, dayNew.getOrDefault(d, 0L), Long::sum);
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            keyEnd.put(key, d);
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> bars = new ArrayList<>();
+        List<BigDecimal> ratios = new ArrayList<>();
+        long barSum = 0;
+        Long barLatest = null;
+        BigDecimal ratioLatest = null;
+        String latestLabel = "";
+        for (String key : newAgg.keySet()) {
+            long nv = newAgg.get(key);
+            LocalDate periodEnd = keyEnd.get(key);
+            long cumulative = 0;
+            for (LocalDate fd : firstDates) {
+                if (!fd.isAfter(periodEnd)) {
+                    cumulative++;
+                }
+            }
+            BigDecimal ratio = cumulative > 0 ? BigDecimal.valueOf(nv * 100.0 / cumulative).setScale(2, RoundingMode.HALF_UP) : null;
+            labels.add(keyLabel.get(key));
+            bars.add(nv);
+            ratios.add(ratio);
+            barSum += nv;
+            barLatest = nv;
+            ratioLatest = ratio;
+            latestLabel = periodLabel(dim, keyDate.get(key));
+        }
+        data.put("labels", labels);
+        data.put("bars", bars);
+        data.put("ratios", ratios);
+        data.put("barLatest", barLatest);
+        data.put("ratioLatest", ratioLatest);
+        data.put("latestLabel", latestLabel);
+        data.put("barSum", barSum);
+        data.put("barMean", labels.isEmpty() ? null : BigDecimal.valueOf((double) barSum / labels.size()).setScale(2, RoundingMode.HALF_UP));
+        return data;
+    }
+
+    /**
+     * 各渠道新增玩家（按 天/周/月 × 渠道）。
+     *
+     * <p>返回 labels(周期) + channels(渠道码，按总量降序) + series(每渠道按 labels 对齐的新增数) + latestLabel。
+     * 渠道原始码（如 XiaoMi/Vivo）由前端映射为展示名。end 默认今日；day=近30天、week=近12周、month=近12个月。
+     * 前端据此渲染「各渠道新增玩家数」(堆积面积) 与「各渠道新增占比」(100%堆积) 两个面板。</p>
+     */
+    public Map<String, Object> channelNewPlayers(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        data.put("labels", new ArrayList<>());
+        data.put("channels", new ArrayList<>());
+        data.put("series", new ArrayList<>());
+        data.put("latestLabel", "");
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        // 注册日 -> 渠道 -> 新增数
+        Map<LocalDate, Map<String, Long>> byDay = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.channelNewPlayerCounts(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            String ch = row.get("channel") == null ? "unknown" : String.valueOf(row.get("channel"));
+            long c = ((Number) row.get("c")).longValue();
+            byDay.computeIfAbsent(d, k -> new HashMap<>()).merge(ch, c, Long::sum);
+        }
+
+        // 按 dim 聚合到周期：periodKey -> 渠道 -> 合计；同时统计各渠道总量用于排序
+        Map<String, Map<String, Long>> periodChannel = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        Map<String, Long> channelTotal = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            Map<String, Long> pc = periodChannel.computeIfAbsent(key, k -> new LinkedHashMap<>());
+            Map<String, Long> chs = byDay.get(d);
+            if (chs != null) {
+                for (Map.Entry<String, Long> e : chs.entrySet()) {
+                    pc.merge(e.getKey(), e.getValue(), Long::sum);
+                    channelTotal.merge(e.getKey(), e.getValue(), Long::sum);
+                }
+            }
+        }
+
+        List<String> channels = new ArrayList<>(channelTotal.keySet());
+        channels.sort((a, b) -> Long.compare(channelTotal.getOrDefault(b, 0L), channelTotal.getOrDefault(a, 0L)));
+
+        List<String> keys = new ArrayList<>(periodChannel.keySet());
+        List<String> labels = new ArrayList<>();
+        for (String key : keys) {
+            labels.add(keyLabel.get(key));
+        }
+
+        List<Map<String, Object>> series = new ArrayList<>();
+        for (String ch : channels) {
+            List<Long> arr = new ArrayList<>();
+            for (String key : keys) {
+                arr.add(periodChannel.get(key).getOrDefault(ch, 0L));
+            }
+            Map<String, Object> sObj = new LinkedHashMap<>();
+            sObj.put("channel", ch);
+            sObj.put("data", arr);
+            series.add(sObj);
+        }
+
+        data.put("labels", labels);
+        data.put("channels", channels);
+        data.put("series", series);
+        data.put("latestLabel", keys.isEmpty() ? "" : periodLabel(dim, keyDate.get(keys.get(keys.size() - 1))));
         return data;
     }
 

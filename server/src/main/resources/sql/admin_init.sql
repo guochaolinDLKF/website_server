@@ -173,6 +173,8 @@ INSERT IGNORE INTO `admin_permission` (`id`,`permission_code`,`permission_name`,
  (29,'payfail:list','支付异常监控',1,20,'/order/payment-failure','',5),
  -- 数据分析
  (39,'analytics:realtime','实时数据',1,35,'/analytics/realtime','',1),
+ (50,'analytics:newdata' ,'新增数据',1,35,'/analytics/newdata','',2),
+ (51,'analytics:payanalysis','付费分析',1,35,'/analytics/payment','',3),
  -- 系统管理
  (41,'admin:list'     ,'管理员管理',1,40,'/system/admin','',1),
  (42,'admin:edit'     ,'编辑管理员',2,41,'','',1),

@@ -63,7 +63,9 @@ export const routes = [
     path: '/analytics',
     component: Layout,
     children: [
-      { path: '/analytics/realtime', name: 'AnalyticsRealtime', component: () => import('@/views/operation/analytics/realtime.vue'), meta: { title: '实时数据', perm: 'analytics:realtime' } }
+      { path: '/analytics/realtime', name: 'AnalyticsRealtime', component: () => import('@/views/operation/analytics/realtime.vue'), meta: { title: '实时数据', perm: 'analytics:realtime' } },
+      { path: '/analytics/newdata', name: 'AnalyticsNewData', component: () => import('@/views/operation/analytics/newdata.vue'), meta: { title: '新增数据', perm: 'analytics:newdata' } },
+      { path: '/analytics/payment', name: 'AnalyticsPayment', component: () => import('@/views/operation/analytics/payment.vue'), meta: { title: '付费分析', perm: 'analytics:payanalysis' } }
     ]
   },
   {

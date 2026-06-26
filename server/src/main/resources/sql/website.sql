@@ -1,17 +1,17 @@
 /*
  Navicat Premium Data Transfer
 
- Source Server         : mysql-3306
+ Source Server         : localhost_3306
  Source Server Type    : MySQL
- Source Server Version : 80043
+ Source Server Version : 80045
  Source Host           : localhost:3306
  Source Schema         : website
 
  Target Server Type    : MySQL
- Target Server Version : 80043
+ Target Server Version : 80045
  File Encoding         : 65001
 
- Date: 26/06/2026 16:29:57
+ Date: 26/06/2026 23:07:19
 */
 
 SET NAMES utf8mb4;
@@ -44,6 +44,13 @@ INSERT INTO `admin_login_log` VALUES (2, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla
 INSERT INTO `admin_login_log` VALUES (3, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:03:59');
 INSERT INTO `admin_login_log` VALUES (4, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:11:47');
 INSERT INTO `admin_login_log` VALUES (5, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 16:27:21');
+INSERT INTO `admin_login_log` VALUES (6, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:36');
+INSERT INTO `admin_login_log` VALUES (7, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:59');
+INSERT INTO `admin_login_log` VALUES (8, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:25:07');
+INSERT INTO `admin_login_log` VALUES (9, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:36:47');
+INSERT INTO `admin_login_log` VALUES (10, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:18:31');
+INSERT INTO `admin_login_log` VALUES (11, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:33:57');
+INSERT INTO `admin_login_log` VALUES (12, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:58:46');
 
 -- ----------------------------
 -- Table structure for admin_operation_log
@@ -136,6 +143,8 @@ INSERT INTO `admin_permission` VALUES (46, 'config:list', '系统配置', 1, 40,
 INSERT INTO `admin_permission` VALUES (47, 'config:edit', '编辑配置', 2, 46, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (48, 'log:login', '登录日志', 1, 40, '/system/login-log', NULL, '', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (49, 'log:operation', '操作日志', 1, 40, '/system/operation-log', NULL, '', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (50, 'analytics:newdata', '新增数据', 1, 35, '/analytics/newdata', NULL, '', 2, 1, '2026-06-26 21:23:33', '2026-06-26 21:23:33', 0);
+INSERT INTO `admin_permission` VALUES (51, 'analytics:payanalysis', '付费分析', 1, 35, '/analytics/payment', NULL, '', 3, 1, '2026-06-26 22:31:13', '2026-06-26 22:31:13', 0);
 
 -- ----------------------------
 -- Table structure for admin_role
@@ -208,6 +217,8 @@ INSERT INTO `admin_role_permission` VALUES (28, 1, 46);
 INSERT INTO `admin_role_permission` VALUES (33, 1, 47);
 INSERT INTO `admin_role_permission` VALUES (29, 1, 48);
 INSERT INTO `admin_role_permission` VALUES (30, 1, 49);
+INSERT INTO `admin_role_permission` VALUES (36, 1, 50);
+INSERT INTO `admin_role_permission` VALUES (37, 1, 51);
 
 -- ----------------------------
 -- Table structure for admin_user
@@ -235,7 +246,7 @@ CREATE TABLE `admin_user`  (
 -- ----------------------------
 -- Records of admin_user
 -- ----------------------------
-INSERT INTO `admin_user` VALUES (1, 'admin', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '超级管理员', NULL, NULL, NULL, 1, '2026-06-24 16:27:21', '0:0:0:0:0:0:0:1', '系统初始化创建', '2026-06-24 10:52:38', '2026-06-24 16:27:21', 0);
+INSERT INTO `admin_user` VALUES (1, 'admin', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '超级管理员', NULL, NULL, NULL, 1, '2026-06-26 22:58:45', '0:0:0:0:0:0:0:1', '系统初始化创建', '2026-06-24 10:52:38', '2026-06-26 22:58:45', 0);
 
 -- ----------------------------
 -- Table structure for admin_user_role
@@ -273,10 +284,6 @@ CREATE TABLE `sys_config`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_config_key`(`config_key`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统配置' ROW_FORMAT = Dynamic;
-
--- ----------------------------
--- Records of sys_config
--- ----------------------------
 
 -- ----------------------------
 -- Table structure for visitinfo

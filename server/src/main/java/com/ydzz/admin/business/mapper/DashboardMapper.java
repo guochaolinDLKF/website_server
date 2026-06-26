@@ -96,6 +96,12 @@ public interface DashboardMapper {
             + "WHERE deleted_flag = 'N' AND create_time >= #{start} AND create_time < #{end}")
     Long activeCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    /** 指定区间 [start,end) 内触发「账号登录」(user_login) 事件的去重用户数（ARPU 分母） */
+    @Select("SELECT COUNT(DISTINCT creator) FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND event_name = 'user_login' "
+            + "AND create_time >= #{start} AND create_time < #{end}")
+    Long loginUserCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     // ===================== 新增用户次日留存 =====================
     // 口径：按注册日 D 分组，reg=当日注册用户数；retained=其中在次日(D+1)有行为事件(custom_event)的去重用户数。
     //       creator(varchar) 存的是用户ID，与 user.id 关联。
@@ -139,4 +145,44 @@ public interface DashboardMapper {
             + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end} "
             + "GROUP BY DATE(payment_time) ORDER BY d")
     List<Map<String, Object>> paymentDailySum(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 全量「设备」首次出现时间（firstTime=该设备最早事件时间）。
+     *
+     * <p>设备指纹 = custom_event_property 中同一事件(custom_event_id)的 device_model 与 device_os
+     * 两个属性值组合，按指纹去重后取 MIN(create_time) 作为该设备首次出现时间。
+     * 上层据此计算「每日新增设备」与「累计设备数」。</p>
+     */
+    @Select("SELECT MIN(ev.t) AS firstTime FROM ( "
+            + "  SELECT m.custom_event_id AS eid, "
+            + "         CONCAT(CAST(m.property_value AS CHAR), '||', CAST(o.property_value AS CHAR)) AS fp, "
+            + "         m.create_time AS t "
+            + "  FROM custom_event_property m "
+            + "  JOIN custom_event_property o "
+            + "    ON o.custom_event_id = m.custom_event_id "
+            + "   AND o.property_name = 'device_os' AND o.deleted_flag = 'N' "
+            + "  WHERE m.property_name = 'device_model' AND m.deleted_flag = 'N' "
+            + ") ev GROUP BY ev.fp")
+    List<Map<String, Object>> deviceFirstSeenTimes();
+
+    /**
+     * 各渠道新增玩家：按注册日 × 渠道统计新增用户数（d=注册日, channel=渠道码, c=新增数）。
+     *
+     * <p>渠道取该用户最早一条带 channel 属性事件的 property_value（JSON 去引号）；
+     * custom_event.creator(varchar) 经 CAST 为数值与 user.id 关联，规避排序规则冲突。
+     * 仅统计有渠道记录的新增用户。channel 原始码由前端映射为展示名。</p>
+     */
+    @Select("SELECT DATE(u.createTime) AS d, ch.channel AS channel, COUNT(*) AS c "
+            + "FROM `user` u "
+            + "JOIN ( "
+            + "  SELECT e.creator AS uid, "
+            + "         SUBSTRING_INDEX(GROUP_CONCAT(JSON_UNQUOTE(p.property_value) ORDER BY e.create_time ASC SEPARATOR 0x1F), 0x1F, 1) AS channel "
+            + "  FROM custom_event e "
+            + "  JOIN custom_event_property p ON p.custom_event_id = e.id AND p.property_name = 'channel' AND p.deleted_flag = 'N' "
+            + "  WHERE e.deleted_flag = 'N' AND e.creator IS NOT NULL "
+            + "  GROUP BY e.creator "
+            + ") ch ON CAST(ch.uid AS UNSIGNED) = u.id "
+            + "WHERE u.createTime >= #{start} AND u.createTime < #{end} "
+            + "GROUP BY DATE(u.createTime), ch.channel ORDER BY d")
+    List<Map<String, Object>> channelNewPlayerCounts(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 }

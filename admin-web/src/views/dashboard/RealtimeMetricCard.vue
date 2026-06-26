@@ -1,7 +1,14 @@
 <template>
   <el-card class="page-card ro-card" shadow="never">
     <div class="ro-header">
-      <span class="ro-title">{{ title }}</span>
+      <el-tooltip placement="top-start" effect="dark" :show-after="100" :disabled="!tip">
+        <template #content>
+          <div style="max-width: 340px; line-height: 1.7; white-space: pre-line; font-size: 12px">{{ tip }}</div>
+        </template>
+        <span class="ro-title" :class="{ 'panel-title-tip': tip }">
+          {{ title }}<el-icon v-if="tip" class="panel-title-info"><InfoFilled /></el-icon>
+        </span>
+      </el-tooltip>
       <div class="ro-actions">
         <el-tooltip content="刷新" placement="top">
           <el-icon class="ro-action-icon" @click="load"><Refresh /></el-icon>
@@ -50,12 +57,13 @@
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
-import { Refresh, View, Hide } from '@element-plus/icons-vue'
+import { Refresh, View, Hide, InfoFilled } from '@element-plus/icons-vue'
 import { getRealtimeOnline, getOnlineTrend } from '@/api/dashboard'
 import DateRangePanel from './DateRangePanel.vue'
 
 const props = defineProps({
   title: { type: String, default: '实时在线' },
+  tip: { type: String, default: '' }, // 标题悬停提示：计算方式/数值说明
   seriesName: { type: String, default: '实时在线人数' }, // intraday 主线图例
   trendSeriesName: { type: String, default: '活跃用户数' }, // trend 线图例
   defaultMode: { type: String, default: 'trend' }, // 默认粒度模式：intraday(按小时) | trend(按天/周/月)

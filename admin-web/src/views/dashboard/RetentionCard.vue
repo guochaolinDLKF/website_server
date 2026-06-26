@@ -1,7 +1,14 @@
 <template>
   <el-card class="page-card retention-card" shadow="never">
     <div class="rc-header">
-      <span class="rc-title">新增用户次日留存</span>
+      <el-tooltip placement="top-start" effect="dark" :show-after="100">
+        <template #content>
+          <div style="max-width: 340px; line-height: 1.7; white-space: pre-line; font-size: 12px">{{ TIP }}</div>
+        </template>
+        <span class="rc-title panel-title-tip">
+          新增用户次日留存<el-icon class="panel-title-info"><InfoFilled /></el-icon>
+        </span>
+      </el-tooltip>
     </div>
     <div class="rc-tabs">
       <span class="rc-tab active">次日</span>
@@ -40,8 +47,15 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { getRetention } from '@/api/dashboard'
 import DateRangePanel from './DateRangePanel.vue'
+
+// 标题悬停提示：计算方式/数值说明
+const TIP =
+  '次日留存率 = 当日注册用户中、次日有行为事件的去重用户数 ÷ 当日注册数 × 100%\n' +
+  '大数字为最新一期留存率，右侧为所选区间各期留存率的均值\n' +
+  '仅统计「次日已完整」的注册日（截至前天）'
 
 const loading = ref(false)
 const data = reactive({ points: [], latest: null, latestLabel: '', mean: null })

@@ -10,6 +10,11 @@ export function getPlayerStats() {
   return request.get('/dashboard/player-stats')
 }
 
+// 付费概况：付费金额/付费人数/付费率/ARPU，各含日环比、周同比
+export function getPayOverview() {
+  return request.get('/dashboard/pay-overview')
+}
+
 export function getUserTrend(days = 30) {
   return request.get('/dashboard/user-trend', { params: { days } })
 }
@@ -47,6 +52,31 @@ export function getRealtimeNewUsers(params = {}) {
 // 新增用户趋势（多日）：{ dim, start, end, cumulative: 0|1 }
 export function getNewUsersTrend(params = { dim: 'day' }) {
   return request.get('/dashboard/new-users-trend', { params })
+}
+
+// 实时付费金额：{ date|start|end, bucket, cumulative: 0|1 }
+export function getRealtimeRevenue(params = {}) {
+  return request.get('/dashboard/realtime-revenue', { params })
+}
+
+// 付费金额趋势（多日）：{ dim, start, end, cumulative: 0|1 }
+export function getRevenueTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/revenue-trend', { params })
+}
+
+// 新增玩家数量及占比（柱=新增玩家，线=新增/活跃占比%）：{ dim, start, end }
+export function getNewPlayersTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/new-players-trend', { params })
+}
+
+// 新增设备数量及占比（柱=激活设备，线=新增/累计设备占比%）：{ dim, start, end }
+export function getNewDevicesTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/new-devices-trend', { params })
+}
+
+// 各渠道新增玩家（返回 labels/channels/series，前端渲染堆积图与占比图）：{ dim, start, end }
+export function getChannelNewPlayers(params = { dim: 'day' }) {
+  return request.get('/dashboard/channel-new-players', { params })
 }
 
 export function getIncomeTrend(days = 30) {

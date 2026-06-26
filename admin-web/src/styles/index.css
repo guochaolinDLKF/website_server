@@ -79,6 +79,22 @@ a {
   font-weight: 700;
 }
 
+/* 数据面板标题：悬停提示（计算方式/数值说明） */
+.panel-title-tip {
+  cursor: help;
+  display: inline-flex;
+  align-items: center;
+}
+.panel-title-info {
+  margin-left: 4px;
+  font-size: 14px;
+  color: #c0c4cc;
+}
+.panel-title-tip:hover .panel-title-info,
+.panel-title-info:hover {
+  color: #409eff;
+}
+
 /* 滚动条美化 */
 ::-webkit-scrollbar {
   width: 8px;

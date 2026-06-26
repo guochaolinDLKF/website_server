@@ -49,6 +49,13 @@ public class DashboardController {
         return Result.success(dashboardService.playerStats());
     }
 
+    @Operation(summary = "付费概况（付费金额/付费人数/付费率/ARPU，含日环比、周同比）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/pay-overview")
+    public Result<Map<String, Object>> payOverview() {
+        return Result.success(dashboardService.payOverview());
+    }
+
     @Operation(summary = "新增用户趋势")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/user-trend")
@@ -144,6 +151,64 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(defaultValue = "0") int cumulative) {
         return Result.success(dashboardService.newUsersTrend(dim, start, end, cumulative == 1));
+    }
+
+    @Operation(summary = "实时付费金额（单日今日+昨日VS；传 start/end 跨多日则区间连续+前一周期VS；cumulative=1 累计）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/realtime-revenue")
+    public Result<Map<String, Object>> realtimeRevenue(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "5") int bucket,
+            @RequestParam(defaultValue = "0") int cumulative) {
+        boolean cum = cumulative == 1;
+        if (start != null && end != null && !start.isEqual(end)) {
+            return Result.success(dashboardService.realtimeRevenueRange(start, end, bucket, cum));
+        }
+        LocalDate day = date != null ? date : end;
+        return Result.success(dashboardService.realtimeRevenue(day, bucket, cum));
+    }
+
+    @Operation(summary = "付费金额趋势（dim=day/week/month；cumulative=1 运行累计）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/revenue-trend")
+    public Result<Map<String, Object>> revenueTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "0") int cumulative) {
+        return Result.success(dashboardService.revenueTrend(dim, start, end, cumulative == 1));
+    }
+
+    @Operation(summary = "新增玩家数量及占比（dim=day/week/month；柱=新增玩家，线=新增/活跃占比%）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/new-players-trend")
+    public Result<Map<String, Object>> newPlayersTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.newPlayersTrend(dim, start, end));
+    }
+
+    @Operation(summary = "新增设备数量及占比（dim=day/week/month；柱=激活设备，线=新增/累计设备占比%）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/new-devices-trend")
+    public Result<Map<String, Object>> newDevicesTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.newDevicesTrend(dim, start, end));
+    }
+
+    @Operation(summary = "各渠道新增玩家（dim=day/week/month；返回各渠道每期新增数，前端渲染堆积/占比）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/channel-new-players")
+    public Result<Map<String, Object>> channelNewPlayers(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.channelNewPlayers(dim, start, end));
     }
 
     @Operation(summary = "收入趋势")

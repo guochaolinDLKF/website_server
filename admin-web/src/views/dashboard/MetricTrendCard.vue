@@ -2,7 +2,14 @@
   <el-card class="page-card mt-card" shadow="never">
     <!-- 头部：标题 -->
     <div class="mt-header">
-      <span class="mt-title">{{ title }}</span>
+      <el-tooltip placement="top-start" effect="dark" :show-after="100" :disabled="!tip">
+        <template #content>
+          <div style="max-width: 340px; line-height: 1.7; white-space: pre-line; font-size: 12px">{{ tip }}</div>
+        </template>
+        <span class="mt-title" :class="{ 'panel-title-tip': tip }">
+          {{ title }}<el-icon v-if="tip" class="panel-title-info"><InfoFilled /></el-icon>
+        </span>
+      </el-tooltip>
     </div>
     <!-- 维度标签 -->
     <div class="mt-tabs">
@@ -58,11 +65,13 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { getOnlineStats } from '@/api/dashboard'
 import DateRangePanel from './DateRangePanel.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
+  tip: { type: String, default: '' }, // 标题悬停提示：计算方式/数值说明
   // 取后端返回的哪条序列：duration(在线时长) | launch(启动次数)
   metric: { type: String, required: true },
   days: { type: Number, default: 30 },
