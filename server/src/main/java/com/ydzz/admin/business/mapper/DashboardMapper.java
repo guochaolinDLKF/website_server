@@ -41,7 +41,7 @@ public interface DashboardMapper {
     @Select("SELECT COUNT(*) FROM user WHERE createTime >= #{start} AND createTime < #{end}")
     Long countNewUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
-    /** 指定区间 [start,end) 成功支付的付费玩家数（去重） */
+    /** 指定区间 [start,end) 「充值成功」触发用户数 = 成功支付的去重 user_id（即付费人数） */
     @Select("SELECT COUNT(DISTINCT user_id) FROM payments "
             + "WHERE payment_status = 'SUCCESS' AND payment_time >= #{start} AND payment_time < #{end}")
     Long countPayUsers(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
@@ -113,6 +113,13 @@ public interface DashboardMapper {
             + "ORDER BY creator, create_time")
     List<Map<String, Object>> eventStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    /** 区间 [start,end) 内「账号登录」(user_login) 事件流水（uid=用户ID, t=事件时间），用于按周期去重统计「账号登录」触发用户数 */
+    @Select("SELECT creator AS uid, create_time AS t FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND event_name = 'user_login' AND creator IS NOT NULL "
+            + "AND create_time >= #{start} AND create_time < #{end} "
+            + "ORDER BY creator, create_time")
+    List<Map<String, Object>> loginEventStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     /** 区间 [start,end) 内按注册日统计：d=注册日, reg=注册数, retained=次日留存数 */
     @Select("SELECT DATE(u.createTime) AS d, "
             + "COUNT(DISTINCT u.id) AS reg, "
@@ -147,6 +154,41 @@ public interface DashboardMapper {
     List<Map<String, Object>> paymentDailySum(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
+     * 区间 [start,end) 内成功支付的去重用户流水（uid=付费用户ID, t=支付时间）。
+     *
+     * <p>用于按周期(天/周/月)对付费用户去重取并集，得到「付费人数=充值成功触发用户数」，
+     * 作为付费率/ARPPU 的分母。</p>
+     */
+    @Select("SELECT user_id AS uid, payment_time AS t FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND user_id IS NOT NULL "
+            + "AND payment_time >= #{start} AND payment_time < #{end} "
+            + "ORDER BY user_id, payment_time")
+    List<Map<String, Object>> paymentUserStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内成功支付的用户流水 + 其注册时间（uid=付费用户ID, pt=支付时间, rt=注册时间）。
+     *
+     * <p>用于「付费人数新老用户分层」：按周期对付费用户去重后，依据注册时间(rt)是否落在该周期内分为新/老用户。</p>
+     */
+    @Select("SELECT p.user_id AS uid, p.payment_time AS pt, u.createTime AS rt "
+            + "FROM payments p JOIN `user` u ON u.id = p.user_id "
+            + "WHERE p.payment_status = 'SUCCESS' AND p.payment_time >= #{start} AND p.payment_time < #{end} "
+            + "ORDER BY p.payment_time")
+    List<Map<String, Object>> paymentUserWithReg(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内按天统计充值订单数：d=下单日, total=发起充值总数, success=成功(SUCCESS)数。
+     *
+     * <p>用于「充值成功率/失败率」：按下单时间(create_time)分桶；
+     * 成功率=success/total，失败率=(total-success)/total。只要不是 SUCCESS 都算失败（含支付中超时、已关闭等）。</p>
+     */
+    @Select("SELECT DATE(create_time) AS d, COUNT(*) AS total, "
+            + "SUM(CASE WHEN payment_status = 'SUCCESS' THEN 1 ELSE 0 END) AS success "
+            + "FROM payments WHERE create_time >= #{start} AND create_time < #{end} "
+            + "GROUP BY DATE(create_time) ORDER BY d")
+    List<Map<String, Object>> paymentStatusDailyCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
      * 全量「设备」首次出现时间（firstTime=该设备最早事件时间）。
      *
      * <p>设备指纹 = custom_event_property 中同一事件(custom_event_id)的 device_model 与 device_os
@@ -166,9 +208,27 @@ public interface DashboardMapper {
     List<Map<String, Object>> deviceFirstSeenTimes();
 
     /**
-     * 各渠道新增玩家：按注册日 × 渠道统计新增用户数（d=注册日, channel=渠道码, c=新增数）。
+     * 区间 [start,end) 内「账号登录」(user_login) 事件携带的设备指纹流水（fp=型号||系统, t=事件时间）。
      *
-     * <p>渠道取该用户最早一条带 channel 属性事件的 property_value（JSON 去引号）；
+     * <p>用于「新增设备占比」的分母——按周期对登录设备指纹去重得到「账号登录的触发设备号数」。
+     * 设备指纹 = 同一登录事件(custom_event_id)的 device_model 与 device_os 属性值组合。</p>
+     */
+    @Select("SELECT CONCAT(CAST(m.property_value AS CHAR), '||', CAST(o.property_value AS CHAR)) AS fp, "
+            + "       e.create_time AS t "
+            + "FROM custom_event e "
+            + "JOIN custom_event_property m ON m.custom_event_id = e.id "
+            + "  AND m.property_name = 'device_model' AND m.deleted_flag = 'N' "
+            + "JOIN custom_event_property o ON o.custom_event_id = e.id "
+            + "  AND o.property_name = 'device_os' AND o.deleted_flag = 'N' "
+            + "WHERE e.deleted_flag = 'N' AND e.event_name = 'user_login' "
+            + "  AND e.create_time >= #{start} AND e.create_time < #{end}")
+    List<Map<String, Object>> loginDeviceStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 各渠道新增玩家：按注册日 × 渠道统计「账号注册」触发用户数（d=注册日, channel=渠道码, c=新增数）。
+     *
+     * <p>口径=「账号注册」的触发用户数按渠道拆分：user 表一人一行，COUNT(*) 即该渠道去重注册用户数。
+     * 渠道取该用户最早一条带 channel 属性事件的 property_value（JSON 去引号）；
      * custom_event.creator(varchar) 经 CAST 为数值与 user.id 关联，规避排序规则冲突。
      * 仅统计有渠道记录的新增用户。channel 原始码由前端映射为展示名。</p>
      */

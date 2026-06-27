@@ -79,6 +79,26 @@ export function getChannelNewPlayers(params = { dim: 'day' }) {
   return request.get('/dashboard/channel-new-players', { params })
 }
 
+// 付费总体趋势（柱=付费金额，线=付费率%）：{ dim, start, end }
+export function getPayTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/pay-trend', { params })
+}
+
+// ARPU 与 ARPPU 趋势（双数值线）：{ dim, start, end }
+export function getArpuTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/arpu-trend', { params })
+}
+
+// 付费人数新老用户分层（双数值线：新/老用户付费人数）：{ dim, start, end }
+export function getPayUserSegmentTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/pay-user-segment-trend', { params })
+}
+
+// 充值成功率与失败率（双百分比线）：{ dim, start, end }
+export function getPaymentSuccessRateTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/payment-success-rate-trend', { params })
+}
+
 export function getIncomeTrend(days = 30) {
   return request.get('/dashboard/income-trend', { params: { days } })
 }

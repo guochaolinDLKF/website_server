@@ -34,13 +34,93 @@
         </div>
       </el-col>
     </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <DualMetricCard
+          title="付费总体趋势"
+          :tip="payTrendTip"
+          bar-name="付费金额"
+          bar-unit=""
+          ratio-name="付费率"
+          :api="getPayTrend"
+          default-preset="past7"
+        />
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <DualLineCard
+          title="ARPU与ARPPU趋势"
+          :tip="arpuTrendTip"
+          name1="arpu"
+          name2="arppu"
+          key1="arpu"
+          key2="arppu"
+          :api="getArpuTrend"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <DualLineCard
+          title="付费人数新老用户分层"
+          :tip="paySegmentTip"
+          name1="新用户付费人数"
+          name2="老用户付费人数"
+          key1="newUsers"
+          key2="oldUsers"
+          value-type="int"
+          :api="getPayUserSegmentTrend"
+          default-preset="past7"
+        />
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <DualLineCard
+          title="充值成功率和失败率"
+          :tip="successRateTip"
+          name1="成功率"
+          name2="失败率"
+          key1="success"
+          key2="fail"
+          value-type="percent"
+          :api="getPaymentSuccessRateTrend"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { InfoFilled } from '@element-plus/icons-vue'
-import { getPayOverview } from '@/api/dashboard'
+import { getPayOverview, getPayTrend, getArpuTrend, getPayUserSegmentTrend, getPaymentSuccessRateTrend } from '@/api/dashboard'
+import DualMetricCard from '../../dashboard/DualMetricCard.vue'
+import DualLineCard from '../../dashboard/DualLineCard.vue'
+
+// 标题悬停提示：数据计算口径
+const payTrendTip =
+  '柱状·付费金额 = 「充值成功」的支付金额总和（所选周期内成功支付的金额合计）\n' +
+  '折线·付费率 = 「充值成功」的触发用户数 ÷ 「账号登录」的触发用户数 × 100%\n' +
+  '（同一人多次只算一人）'
+
+const arpuTrendTip =
+  'arpu  = 付费金额 ÷ 「账号登录」的触发用户数（登录用户人均贡献）\n' +
+  'arppu = 付费金额 ÷ 付费人数（即「充值成功」的触发用户数，付费用户人均贡献）\n' +
+  '（同一人多次只算一人；均保留 2 位小数）'
+
+const paySegmentTip =
+  '从「充值成功」的付费人数里，按是不是新用户拆成两条：\n' +
+  '新用户付费人数：付费成功、且在所选时间范围内注册的人数\n' +
+  '老用户付费人数：付费成功、但在所选范围之前就注册的人数\n' +
+  '（新老按所选时间范围统一判定；同一人在同一周期只算一次）'
+
+const successRateTip =
+  '按下单时间统计这段时间的充值订单（发起充值=全部充值订单）：\n' +
+  '成功率 = 充值成功的次数 ÷ 发起充值的次数 × 100%\n' +
+  '失败率 = 充值失败的次数 ÷ 发起充值的次数 × 100%\n' +
+  '（只要不是成功都算失败，含支付中超时、已关闭等；成功率 + 失败率 = 100%）'
 
 const stats = reactive({})
 
@@ -102,8 +182,8 @@ function buildCards() {
   const rate = stats.payRate || {}
   const arpu = stats.arpu || {}
   cards.value = [
-    { key: 'amount', title: '付费金额', tip: '今日成功支付金额合计（payments 中 payment_status=SUCCESS，今日 00:00 至当前）\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtMoney(amt.value), unit: '', compares: compares(amt, today) },
-    { key: 'users', title: '付费人数', tip: '今日成功支付的去重用户数\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtInt(users.value), unit: '人', compares: compares(users, today) },
+    { key: 'amount', title: '付费金额', tip: '付费金额 = 「充值成功」的支付金额总和\n即：今日成功支付(payments SUCCESS)金额合计（今日 00:00 至当前）\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtMoney(amt.value), unit: '', compares: compares(amt, today) },
+    { key: 'users', title: '付费人数', tip: '付费人数 = 「充值成功」的触发用户数\n即：今日成功支付(payments SUCCESS)的去重用户数\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtInt(users.value), unit: '人', compares: compares(users, today) },
     { key: 'rate', title: '付费率', tip: '付费率 = 「充值成功」的触发用户数 ÷ 「账号登录」的触发用户数 × 100%\n即：今日成功支付(payments SUCCESS)的去重用户数 ÷ 今日触发「账号登录」(user_login) 的去重用户数\n日环比/周同比为付费率的相对变化', date: label, value: fmtPct(rate.value), unit: '', compares: compares(rate, today) },
     { key: 'arpu', title: '人均贡献金额（ARPU）', tip: 'ARPU = 「充值成功」的支付金额总和 ÷ 「账号登录」的触发用户数（保留 2 位小数）\n即：今日成功支付金额合计 ÷ 今日触发「账号登录」(user_login) 的去重用户数', date: label, value: fmtAmt2(arpu.value), unit: '', compares: compares(arpu, today) }
   ]

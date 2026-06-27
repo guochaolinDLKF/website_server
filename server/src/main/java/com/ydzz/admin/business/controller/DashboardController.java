@@ -211,6 +211,46 @@ public class DashboardController {
         return Result.success(dashboardService.channelNewPlayers(dim, start, end));
     }
 
+    @Operation(summary = "付费总体趋势（dim=day/week/month；柱=付费金额，线=付费率%）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/pay-trend")
+    public Result<Map<String, Object>> payTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.payTrend(dim, start, end));
+    }
+
+    @Operation(summary = "ARPU 与 ARPPU 趋势（dim=day/week/month；双数值线）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/arpu-trend")
+    public Result<Map<String, Object>> arpuTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.arpuTrend(dim, start, end));
+    }
+
+    @Operation(summary = "付费人数新老用户分层（dim=day/week/month；双数值线：新/老用户付费人数）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/pay-user-segment-trend")
+    public Result<Map<String, Object>> payUserSegmentTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.payUserSegmentTrend(dim, start, end));
+    }
+
+    @Operation(summary = "充值成功率与失败率（dim=day/week/month；双百分比线）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/payment-success-rate-trend")
+    public Result<Map<String, Object>> paymentSuccessRateTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.paymentSuccessRateTrend(dim, start, end));
+    }
+
     @Operation(summary = "收入趋势")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/income-trend")
