@@ -104,7 +104,7 @@ function buildCards() {
   cards.value = [
     { key: 'amount', title: '付费金额', tip: '今日成功支付金额合计（payments 中 payment_status=SUCCESS，今日 00:00 至当前）\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtMoney(amt.value), unit: '', compares: compares(amt, today) },
     { key: 'users', title: '付费人数', tip: '今日成功支付的去重用户数\n日环比 vs 昨日同时段，周同比 vs 上周同日同时段', date: label, value: fmtInt(users.value), unit: '人', compares: compares(users, today) },
-    { key: 'rate', title: '付费率', tip: '付费率 = 付费人数 ÷ 活跃人数(DAU) × 100%\n日环比/周同比为付费率的相对变化', date: label, value: fmtPct(rate.value), unit: '', compares: compares(rate, today) },
+    { key: 'rate', title: '付费率', tip: '付费率 = 「充值成功」的触发用户数 ÷ 「账号登录」的触发用户数 × 100%\n即：今日成功支付(payments SUCCESS)的去重用户数 ÷ 今日触发「账号登录」(user_login) 的去重用户数\n日环比/周同比为付费率的相对变化', date: label, value: fmtPct(rate.value), unit: '', compares: compares(rate, today) },
     { key: 'arpu', title: '人均贡献金额（ARPU）', tip: 'ARPU = 「充值成功」的支付金额总和 ÷ 「账号登录」的触发用户数（保留 2 位小数）\n即：今日成功支付金额合计 ÷ 今日触发「账号登录」(user_login) 的去重用户数', date: label, value: fmtAmt2(arpu.value), unit: '', compares: compares(arpu, today) }
   ]
 }

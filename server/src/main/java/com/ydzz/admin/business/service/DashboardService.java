@@ -162,7 +162,7 @@ public class DashboardService {
      * 付费概况：付费金额 / 付费人数 / 付费率 / 人均贡献金额(ARPU)，各含日环比、周同比。
      *
      * <p>口径与玩家概览一致——「当日 00:00 ~ 当前时刻」等长窗口对比（日环比 vs 昨日同时段，周同比 vs 上周同日同时段）。
-     * 付费率 = 付费人数 ÷ 活跃人数(DAU) ×100；
+     * 付费率 = 「充值成功」触发用户数 ÷ 「账号登录」(user_login) 触发用户数 ×100；
      * ARPU = 「充值成功」支付金额总和 ÷ 「账号登录」(user_login) 触发去重用户数。</p>
      */
     public Map<String, Object> payOverview() {
@@ -182,11 +182,7 @@ public class DashboardService {
         long payY = nullSafe(dashboardMapper.countPayUsers(yestStart, yestNow));
         long payW = nullSafe(dashboardMapper.countPayUsers(weekAgoStart, weekAgoNow));
 
-        long actT = nullSafe(dashboardMapper.activeCount(todayStart, now));
-        long actY = nullSafe(dashboardMapper.activeCount(yestStart, yestNow));
-        long actW = nullSafe(dashboardMapper.activeCount(weekAgoStart, weekAgoNow));
-
-        // ARPU 分母：「账号登录」(user_login) 触发去重用户数
+        // 付费率分母 & ARPU 分母：「账号登录」(user_login) 触发去重用户数
         long lgnT = nullSafe(dashboardMapper.loginUserCount(todayStart, now));
         long lgnY = nullSafe(dashboardMapper.loginUserCount(yestStart, yestNow));
         long lgnW = nullSafe(dashboardMapper.loginUserCount(weekAgoStart, weekAgoNow));
@@ -194,13 +190,14 @@ public class DashboardService {
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("payAmount", metricMoney(amtT, amtY, amtW));
         data.put("payUsers", metric(payT, payY, payW));
-        data.put("payRate", metricMoney(payRate(payT, actT), payRate(payY, actY), payRate(payW, actW)));
+        // 付费率 = 「充值成功」触发用户数 ÷ 「账号登录」触发用户数
+        data.put("payRate", metricMoney(payRate(payT, lgnT), payRate(payY, lgnY), payRate(payW, lgnW)));
         // ARPU = 「充值成功」支付金额总和 ÷ 「账号登录」触发用户数
         data.put("arpu", metricMoney(arpu(amtT, lgnT), arpu(amtY, lgnY), arpu(amtW, lgnW)));
         return data;
     }
 
-    /** 付费率 = 付费人数 ÷ 活跃人数 ×100（2 位小数）；活跃为 0 返回 0 */
+    /** 付费率 = 「充值成功」触发用户数 ÷ 「账号登录」触发用户数 ×100（2 位小数）；分母为 0 返回 0 */
     private BigDecimal payRate(long part, long total) {
         if (total <= 0) {
             return BigDecimal.ZERO;

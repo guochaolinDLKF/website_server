@@ -74,8 +74,6 @@ export const routes = [
     children: [
       { path: '/system/admin', name: 'AdminUser', component: () => import('@/views/operation/system/admin.vue'), meta: { title: '管理员管理', perm: 'admin:list' } },
       { path: '/system/role', name: 'Role', component: () => import('@/views/operation/system/role.vue'), meta: { title: '角色管理', perm: 'role:list' } },
-      { path: '/system/permission', name: 'Permission', component: () => import('@/views/operation/system/permission.vue'), meta: { title: '权限菜单', perm: 'permission:tree' } },
-      { path: '/system/config', name: 'Config', component: () => import('@/views/operation/system/config.vue'), meta: { title: '系统配置', perm: 'config:list' } },
       { path: '/system/login-log', name: 'LoginLog', component: () => import('@/views/operation/system/loginLog.vue'), meta: { title: '登录日志', perm: 'log:login' } },
       { path: '/system/operation-log', name: 'OperationLog', component: () => import('@/views/operation/system/operationLog.vue'), meta: { title: '操作日志', perm: 'log:operation' } }
     ]
