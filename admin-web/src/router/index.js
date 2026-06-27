@@ -64,6 +64,7 @@ export const routes = [
     component: Layout,
     children: [
       { path: '/analytics/realtime', name: 'AnalyticsRealtime', component: () => import('@/views/operation/analytics/realtime.vue'), meta: { title: '实时数据', perm: 'analytics:realtime' } },
+      { path: '/analytics/active', name: 'AnalyticsActive', component: () => import('@/views/operation/analytics/active.vue'), meta: { title: '活跃数据', perm: 'analytics:active' } },
       { path: '/analytics/newdata', name: 'AnalyticsNewData', component: () => import('@/views/operation/analytics/newdata.vue'), meta: { title: '新增数据', perm: 'analytics:newdata' } },
       { path: '/analytics/payment', name: 'AnalyticsPayment', component: () => import('@/views/operation/analytics/payment.vue'), meta: { title: '付费分析', perm: 'analytics:payanalysis' } }
     ]
@@ -73,7 +74,7 @@ export const routes = [
     component: Layout,
     children: [
       { path: '/system/admin', name: 'AdminUser', component: () => import('@/views/operation/system/admin.vue'), meta: { title: '管理员管理', perm: 'admin:list' } },
-      { path: '/system/role', name: 'Role', component: () => import('@/views/operation/system/role.vue'), meta: { title: '角色管理', perm: 'role:list' } },
+      { path: '/system/role', name: 'Role', component: () => import('@/views/operation/system/role.vue'), meta: { title: '成员管理', perm: 'role:list' } },
       { path: '/system/login-log', name: 'LoginLog', component: () => import('@/views/operation/system/loginLog.vue'), meta: { title: '登录日志', perm: 'log:login' } },
       { path: '/system/operation-log', name: 'OperationLog', component: () => import('@/views/operation/system/operationLog.vue'), meta: { title: '操作日志', perm: 'log:operation' } }
     ]

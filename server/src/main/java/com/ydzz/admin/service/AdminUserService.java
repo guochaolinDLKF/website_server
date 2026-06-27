@@ -4,9 +4,12 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ydzz.admin.config.AdminStpUtil;
 import com.ydzz.admin.dto.AdminUserSaveRequest;
+import com.ydzz.admin.entity.AdminRole;
 import com.ydzz.admin.entity.AdminUser;
 import com.ydzz.admin.entity.AdminUserRole;
+import com.ydzz.admin.mapper.AdminRoleMapper;
 import com.ydzz.admin.mapper.AdminUserMapper;
 import com.ydzz.admin.mapper.AdminUserRoleMapper;
 import com.ydzz.common.ErrorCode;
@@ -25,12 +28,22 @@ import java.util.List;
 @Service
 public class AdminUserService {
 
+    /** 普通成员角色编码：新增账号默认绑定此角色 */
+    private static final String MEMBER_ROLE_CODE = "MEMBER";
+    /** 超级管理员角色编码：禁止禁用/删除拥有该角色的账号 */
+    private static final String SUPER_ADMIN_ROLE_CODE = "SUPER_ADMIN";
+
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper userRoleMapper;
+    private final AdminRoleMapper roleMapper;
+    private final AdminRbacService rbacService;
 
-    public AdminUserService(AdminUserMapper adminUserMapper, AdminUserRoleMapper userRoleMapper) {
+    public AdminUserService(AdminUserMapper adminUserMapper, AdminUserRoleMapper userRoleMapper,
+                            AdminRoleMapper roleMapper, AdminRbacService rbacService) {
         this.adminUserMapper = adminUserMapper;
         this.userRoleMapper = userRoleMapper;
+        this.roleMapper = roleMapper;
+        this.rbacService = rbacService;
     }
 
     public AdminUser getByUsername(String username) {
@@ -97,11 +110,31 @@ public class AdminUserService {
             adminUserMapper.updateById(entity);
         }
 
-        // 重新绑定角色
-        if (req.getRoleIds() != null) {
-            rebindRoles(entity.getId(), req.getRoleIds());
+        // 重新绑定角色：新增账号若未指定角色，系统默认绑定「普通成员(MEMBER)」
+        List<Long> roleIds = req.getRoleIds();
+        if (req.getId() == null && (roleIds == null || roleIds.isEmpty())) {
+            Long memberRoleId = resolveMemberRoleId();
+            if (memberRoleId != null) {
+                roleIds = List.of(memberRoleId);
+            }
+        }
+        if (roleIds != null) {
+            rebindRoles(entity.getId(), roleIds);
         }
         return entity.getId();
+    }
+
+    /** 查询「普通成员(MEMBER)」角色ID，供新增账号默认绑定 */
+    private Long resolveMemberRoleId() {
+        LambdaQueryWrapper<AdminRole> qw = new LambdaQueryWrapper<>();
+        qw.eq(AdminRole::getRoleCode, MEMBER_ROLE_CODE);
+        AdminRole role = roleMapper.selectOne(qw);
+        return role == null ? null : role.getId();
+    }
+
+    /** 是否为超级管理员账号 */
+    private boolean isSuperAdmin(Long adminId) {
+        return adminId != null && rbacService.listRoleCodes(adminId).contains(SUPER_ADMIN_ROLE_CODE);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -123,6 +156,16 @@ public class AdminUserService {
         AdminUser exist = adminUserMapper.selectById(id);
         if (exist == null) {
             throw new BusinessException(ErrorCode.NotFound, "管理员不存在");
+        }
+        // 禁用时的兜底保护：不能禁用当前登录账号，超级管理员账号也不可被禁用
+        if (status != null && status == 0) {
+            long current = AdminStpUtil.getLoginIdAsLong();
+            if (current == id) {
+                throw new BusinessException(ErrorCode.BadRequest, "不能禁用当前登录账号");
+            }
+            if (isSuperAdmin(id)) {
+                throw new BusinessException(ErrorCode.BadRequest, "超级管理员账号不可禁用");
+            }
         }
         AdminUser update = new AdminUser();
         update.setId(id);
@@ -159,6 +202,14 @@ public class AdminUserService {
     }
 
     public void removeById(Long id) {
+        // 兜底保护：不能删除当前登录账号，超级管理员账号也不可被删除
+        long current = AdminStpUtil.getLoginIdAsLong();
+        if (id != null && current == id) {
+            throw new BusinessException(ErrorCode.BadRequest, "不能删除当前登录账号");
+        }
+        if (isSuperAdmin(id)) {
+            throw new BusinessException(ErrorCode.BadRequest, "超级管理员账号不可删除");
+        }
         adminUserMapper.deleteById(id);
     }
 }

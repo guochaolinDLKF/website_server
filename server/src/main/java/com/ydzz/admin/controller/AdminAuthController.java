@@ -32,6 +32,12 @@ public class AdminAuthController {
         this.authService = authService;
     }
 
+    @Operation(summary = "获取图形验证码")
+    @GetMapping("/captcha")
+    public Result<java.util.Map<String, String>> captcha() {
+        return Result.success(authService.generateCaptcha());
+    }
+
     @Operation(summary = "管理员登录")
     @PostMapping("/login")
     public Result<AdminLoginVo> login(@Valid @RequestBody AdminLoginRequest req, HttpServletRequest request) {

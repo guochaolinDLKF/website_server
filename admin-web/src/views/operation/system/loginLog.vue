@@ -17,12 +17,18 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="username" label="账号" min-width="120" />
         <el-table-column prop="loginIp" label="IP" width="150" />
+        <el-table-column label="登录地区" min-width="140">
+          <template #default="{ row }">
+            <span :style="{ color: row.abnormal === 1 ? '#f56c6c' : '' }">{{ row.loginRegion || '—' }}</span>
+            <el-tag v-if="row.abnormal === 1" type="danger" size="small" effect="dark" style="margin-left: 6px">异常登录</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="类型" width="90">
           <template #default="{ row }">
             <el-tag :type="row.loginType === 1 ? 'primary' : 'info'">{{ row.loginType === 1 ? '登录' : '登出' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="结果" width="90">
+        <el-table-column label="登录结果" width="90">
           <template #default="{ row }">
             <el-tag :type="row.status === 1 ? 'success' : 'danger'">{{ row.status === 1 ? '成功' : '失败' }}</el-tag>
           </template>

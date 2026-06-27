@@ -16,6 +16,18 @@
             show-password
           />
         </el-form-item>
+        <el-form-item prop="captcha">
+          <div class="captcha-row">
+            <el-input v-model="form.captcha" placeholder="请输入验证码" :prefix-icon="Picture" @keyup.enter="onSubmit" />
+            <img
+              class="captcha-img"
+              :src="captchaImg"
+              alt="验证码"
+              title="点击刷新"
+              @click="refreshCaptcha"
+            />
+          </div>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" class="login-btn" :loading="loading" @click="onSubmit">
             登 录
@@ -28,11 +40,12 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Picture } from '@element-plus/icons-vue'
 import { useUserStore } from '@/store/user'
+import { getCaptcha } from '@/api/auth'
 
 const router = useRouter()
 const route = useRoute()
@@ -40,26 +53,47 @@ const userStore = useUserStore()
 
 const formRef = ref()
 const loading = ref(false)
-const form = reactive({ username: 'admin', password: '' })
+const form = reactive({ username: 'admin', password: '', captcha: '', captchaId: '' })
+const captchaImg = ref('')
 const rules = {
   username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
+  captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+}
+
+async function refreshCaptcha() {
+  try {
+    const res = await getCaptcha()
+    captchaImg.value = res.data.image
+    form.captchaId = res.data.captchaId
+    form.captcha = ''
+  } catch (e) {
+    /* 拦截器已提示 */
+  }
 }
 
 async function onSubmit() {
   await formRef.value.validate()
   loading.value = true
   try {
-    await userStore.login({ username: form.username, password: form.password })
+    await userStore.login({
+      username: form.username,
+      password: form.password,
+      captcha: form.captcha,
+      captchaId: form.captchaId
+    })
     ElMessage.success('登录成功')
     const redirect = route.query.redirect || '/'
     router.push(redirect)
   } catch (e) {
-    // 错误信息已由拦截器提示
+    // 登录失败（含验证码错误）：刷新验证码，错误信息已由拦截器提示
+    refreshCaptcha()
   } finally {
     loading.value = false
   }
 }
+
+onMounted(refreshCaptcha)
 </script>
 
 <style scoped>
@@ -90,6 +124,21 @@ async function onSubmit() {
   color: #909399;
   margin: 6px 0 24px;
   letter-spacing: 1px;
+}
+.captcha-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.captcha-img {
+  height: 40px;
+  width: 120px;
+  border: 1px solid #dcdfe6;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  object-fit: cover;
 }
 .login-btn {
   width: 100%;

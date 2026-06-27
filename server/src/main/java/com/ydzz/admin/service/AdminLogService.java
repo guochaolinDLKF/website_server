@@ -22,10 +22,13 @@ public class AdminLogService {
 
     private final AdminLoginLogMapper loginLogMapper;
     private final AdminOperationLogMapper operationLogMapper;
+    private final IpRegionService ipRegionService;
 
-    public AdminLogService(AdminLoginLogMapper loginLogMapper, AdminOperationLogMapper operationLogMapper) {
+    public AdminLogService(AdminLoginLogMapper loginLogMapper, AdminOperationLogMapper operationLogMapper,
+                           IpRegionService ipRegionService) {
         this.loginLogMapper = loginLogMapper;
         this.operationLogMapper = operationLogMapper;
+        this.ipRegionService = ipRegionService;
     }
 
     /**
@@ -42,6 +45,10 @@ public class AdminLogService {
             logEntity.setAdminId(adminId);
             logEntity.setUsername(username);
             logEntity.setLoginIp(ip);
+            // 地区与异常标记（高德IP定位；国外IP标记异常）
+            String[] r = ipRegionService.region(ip);
+            logEntity.setLoginRegion(r[0]);
+            logEntity.setAbnormal("1".equals(r[1]) ? 1 : 0);
             logEntity.setUserAgent(userAgent);
             logEntity.setLoginType(loginType);
             logEntity.setStatus(status);
@@ -56,6 +63,10 @@ public class AdminLogService {
     @Async
     public void saveOperationLog(AdminOperationLog logEntity) {
         try {
+            // 地区与异常标记（高德IP定位；国外IP标记异常）
+            String[] r = ipRegionService.region(logEntity.getIp());
+            logEntity.setRegion(r[0]);
+            logEntity.setAbnormal("1".equals(r[1]) ? 1 : 0);
             operationLogMapper.insert(logEntity);
         } catch (Exception e) {
             log.warn("[后台操作日志] 写入失败: {}", e.getMessage());

@@ -251,6 +251,75 @@ public class DashboardController {
         return Result.success(dashboardService.paymentSuccessRateTrend(dim, start, end));
     }
 
+    @Operation(summary = "注册首日付费转化率（dim=day/week/month；单百分比线）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/first-day-pay-trend")
+    public Result<Map<String, Object>> firstDayPayTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.firstDayPayTrend(dim, start, end));
+    }
+
+    @Operation(summary = "注册后阶段累计付费人数（同期群表格；dim=day/week/month，maxStage=注册后最大阶段数）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/reg-stage-pay-cohort")
+    public Result<Map<String, Object>> regStagePayCohort(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "7") int maxStage) {
+        return Result.success(dashboardService.regStagePayCohort(dim, start, end, maxStage));
+    }
+
+    @Operation(summary = "付费流水构成（按权益）：所选区间成功支付金额按权益拆分，用于环形图")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/pay-composition-benefit")
+    public Result<Map<String, Object>> payCompositionByBenefit(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.payCompositionByBenefit(start, end));
+    }
+
+    @Operation(summary = "付费流水构成（按权益）趋势（dim=day/week/month；多折线，每条线一个权益）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/pay-benefit-trend")
+    public Result<Map<String, Object>> payAmountByBenefitTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.payAmountByBenefitTrend(dim, start, end));
+    }
+
+    @Operation(summary = "商品复购率（按权益）趋势（dim=day/week/month；多折线，含总体线）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/product-repurchase-trend")
+    public Result<Map<String, Object>> productRepurchaseTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.productRepurchaseTrend(dim, start, end));
+    }
+
+    @Operation(summary = "每日活跃数据（dim=day/week/month；DAU/WAU/MAU 三柱 + DAU/MAU 粘性折线）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/active-trend")
+    public Result<Map<String, Object>> activeTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.activeTrend(dim, start, end));
+    }
+
+    @Operation(summary = "活跃用户生命周期天数构成（环形图）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/active-lifecycle-dist")
+    public Result<Map<String, Object>> activeLifecycleDist(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.activeLifecycleDist(start, end));
+    }
+
     @Operation(summary = "收入趋势")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/income-trend")

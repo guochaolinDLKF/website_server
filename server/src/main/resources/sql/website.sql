@@ -26,6 +26,8 @@ CREATE TABLE `admin_login_log`  (
   `admin_id` bigint(0) NULL DEFAULT NULL,
   `username` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `login_ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `login_region` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '登录地区(高德IP定位)',
+  `abnormal` tinyint(0) NOT NULL DEFAULT 0 COMMENT '是否异常登录(国外IP):1是0否',
   `user_agent` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
   `login_type` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1登录 2登出',
   `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1成功 0失败',
@@ -68,6 +70,8 @@ CREATE TABLE `admin_operation_log`  (
   `request_param` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `response_result` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
   `ip` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL,
+  `region` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '操作地区(高德IP定位)',
+  `abnormal` tinyint(0) NOT NULL DEFAULT 0 COMMENT '是否异常(国外IP):1是0否',
   `cost_ms` bigint(0) NULL DEFAULT NULL COMMENT '耗时(毫秒)',
   `status` tinyint(0) NOT NULL DEFAULT 1 COMMENT '1成功 0异常',
   `error_msg` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL,
@@ -134,14 +138,14 @@ INSERT INTO `admin_permission` VALUES (37, 'analytics:income', '收入分析', 1
 INSERT INTO `admin_permission` VALUES (38, 'analytics:func', '功能分析', 1, 35, '/analytics/func', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-26 09:44:59', 1);
 INSERT INTO `admin_permission` VALUES (39, 'analytics:realtime', '实时数据', 1, 35, '/analytics/realtime', NULL, '', 4, 1, '2026-06-26 09:35:07', '2026-06-26 09:35:07', 0);
 INSERT INTO `admin_permission` VALUES (40, 'system:menu', '系统管理', 1, 0, '/system', NULL, 'Setting', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_permission` VALUES (41, 'admin:list', '管理员管理', 1, 40, '/system/admin', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (41, 'admin:list', '管理员管理', 2, 40, '/system/admin', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (42, 'admin:edit', '编辑管理员', 2, 41, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_permission` VALUES (43, 'role:list', '角色管理', 1, 40, '/system/role', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_permission` VALUES (44, 'role:assign', '分配权限', 2, 43, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (43, 'role:list', '成员管理', 1, 40, '/system/role', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (48, 'log:login', '登录日志', 1, 40, '/system/login-log', NULL, '', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (49, 'log:operation', '操作日志', 1, 40, '/system/operation-log', NULL, '', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (50, 'analytics:newdata', '新增数据', 1, 35, '/analytics/newdata', NULL, '', 2, 1, '2026-06-26 21:23:33', '2026-06-26 21:23:33', 0);
 INSERT INTO `admin_permission` VALUES (51, 'analytics:payanalysis', '付费分析', 1, 35, '/analytics/payment', NULL, '', 3, 1, '2026-06-26 22:31:13', '2026-06-26 22:31:13', 0);
+INSERT INTO `admin_permission` VALUES (52, 'analytics:active', '活跃数据', 1, 35, '/analytics/active', NULL, '', 5, 1, '2026-06-27 09:44:00', '2026-06-27 09:44:00', 0);
 
 -- ----------------------------
 -- Table structure for admin_role
@@ -169,6 +173,7 @@ INSERT INTO `admin_role` VALUES (2, 'OPERATOR', '运营', '运营人员，内容
 INSERT INTO `admin_role` VALUES (3, 'SERVICE', '客服', '用户查看与禁用，订单查看', 1, 3, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_role` VALUES (4, 'FINANCE', '财务', '订单/退款/收入相关', 1, 4, '2026-06-24 10:49:42', '2026-06-24 13:30:51', 1);
 INSERT INTO `admin_role` VALUES (5, 'ANALYST', '数据分析', '数据分析查看', 1, 5, '2026-06-24 10:49:42', '2026-06-24 13:30:47', 1);
+INSERT INTO `admin_role` VALUES (7, 'MEMBER', '普通成员', '普通成员：除角色增删改外拥有全部权限', 1, 7, '2026-06-27 12:00:00', '2026-06-27 12:00:00', 0);
 
 -- ----------------------------
 -- Table structure for admin_role_permission
@@ -208,11 +213,14 @@ INSERT INTO `admin_role_permission` VALUES (6, 1, 40);
 INSERT INTO `admin_role_permission` VALUES (25, 1, 41);
 INSERT INTO `admin_role_permission` VALUES (31, 1, 42);
 INSERT INTO `admin_role_permission` VALUES (26, 1, 43);
-INSERT INTO `admin_role_permission` VALUES (32, 1, 44);
 INSERT INTO `admin_role_permission` VALUES (29, 1, 48);
 INSERT INTO `admin_role_permission` VALUES (30, 1, 49);
 INSERT INTO `admin_role_permission` VALUES (36, 1, 50);
 INSERT INTO `admin_role_permission` VALUES (37, 1, 51);
+INSERT INTO `admin_role_permission` VALUES (38, 1, 52);
+-- 普通成员(role 7)：除「角色管理(role:list)」外的全部权限
+INSERT INTO `admin_role_permission` (`role_id`, `permission_id`)
+SELECT 7, `id` FROM `admin_permission` WHERE `permission_code` IS NULL OR `permission_code` <> 'role:list';
 
 -- ----------------------------
 -- Table structure for admin_user

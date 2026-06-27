@@ -35,6 +35,14 @@ redis:
   password: "ydzz.@KeJi#."              # Redis 密码（含 # 时必须用双引号包裹，否则 # 会被当成注释）
   database: 5                           # 使用的 Redis 数据库编号（0-15），默认 0
 
+# ---------- 高德地图 IP 定位（登录/操作日志 地区解析；沿用 VisitInfoServiceImpl 的 Key） ----------
+amap:
+  key: 'a0aea882477a1b77b97eee0e8fc07a30'   # 高德 Web 服务 Key（IP 定位）；国内 IP 精确到省/市，国外用 ip-api 取国家城市并标记异常
+
+# ---------- 本机公网 IP echo 服务（本地开发取「当前设备所在网络的外网IP」） ----------
+ip:
+  echo-url: 'http://ip-api.com/line/?fields=query'   # 取本机公网IP(纯文本，HTTP)；生产环境优先用 X-Forwarded-For，不依赖此项
+
 
 # ============================================================
 # 二、Spring 框架配置

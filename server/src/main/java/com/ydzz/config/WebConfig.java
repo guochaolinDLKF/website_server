@@ -96,7 +96,7 @@ public class WebConfig implements WebMvcConfigurer {
         // 第三步：注册后台管理端拦截器（独立 admin 登录域 + 注解权限校验）
         registry.addInterceptor(new SaInterceptor(handler ->
                 SaRouter.match("/api/admin/**")
-                        .notMatch("/api/admin/auth/login")
+                        .notMatch("/api/admin/auth/login", "/api/admin/auth/captcha")
                         .check(r -> AdminStpUtil.checkLogin())
         ))
         .addPathPatterns("/api/admin/**")

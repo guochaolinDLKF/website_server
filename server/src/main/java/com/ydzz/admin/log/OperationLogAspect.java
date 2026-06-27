@@ -6,7 +6,7 @@ import com.ydzz.admin.entity.AdminOperationLog;
 import com.ydzz.admin.entity.AdminUser;
 import com.ydzz.admin.mapper.AdminUserMapper;
 import com.ydzz.admin.service.AdminLogService;
-import com.ydzz.util.ClientIpUtil;
+import com.ydzz.admin.service.IpRegionService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -38,10 +38,13 @@ public class OperationLogAspect {
 
     private final AdminLogService logService;
     private final AdminUserMapper adminUserMapper;
+    private final IpRegionService ipRegionService;
 
-    public OperationLogAspect(AdminLogService logService, AdminUserMapper adminUserMapper) {
+    public OperationLogAspect(AdminLogService logService, AdminUserMapper adminUserMapper,
+                              IpRegionService ipRegionService) {
         this.logService = logService;
         this.adminUserMapper = adminUserMapper;
+        this.ipRegionService = ipRegionService;
     }
 
     @Around("@annotation(operationLog)")
@@ -71,7 +74,7 @@ public class OperationLogAspect {
         if (request != null) {
             logEntity.setRequestUri(request.getRequestURI());
             logEntity.setRequestMethod(request.getMethod());
-            logEntity.setIp(ClientIpUtil.getClientIp(request));
+            logEntity.setIp(ipRegionService.resolvePublicIp(request));
         }
 
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();

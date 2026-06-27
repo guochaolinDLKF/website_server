@@ -102,6 +102,17 @@ public interface DashboardMapper {
             + "AND create_time >= #{start} AND create_time < #{end}")
     Long loginUserCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    /**
+     * 区间 [start,end) 内活跃用户及其注册时间（uid=用户ID, reg=注册时间）。
+     *
+     * <p>用于「活跃用户生命周期天数构成」：活跃=custom_event 去重 creator，经 CAST 关联 user 取注册时间。</p>
+     */
+    @Select("SELECT DISTINCT e.creator AS uid, u.createTime AS reg "
+            + "FROM custom_event e JOIN `user` u ON CAST(e.creator AS UNSIGNED) = u.id "
+            + "WHERE e.deleted_flag = 'N' AND e.creator IS NOT NULL "
+            + "AND e.create_time >= #{start} AND e.create_time < #{end}")
+    List<Map<String, Object>> activeUserReg(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
     // ===================== 新增用户次日留存 =====================
     // 口径：按注册日 D 分组，reg=当日注册用户数；retained=其中在次日(D+1)有行为事件(custom_event)的去重用户数。
     //       creator(varchar) 存的是用户ID，与 user.id 关联。
@@ -177,16 +188,79 @@ public interface DashboardMapper {
     List<Map<String, Object>> paymentUserWithReg(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
-     * 区间 [start,end) 内按天统计充值订单数：d=下单日, total=发起充值总数, success=成功(SUCCESS)数。
+     * 区间 [start,end) 内按天统计充值订单数：d=下单日, total=发起充值总数, success=成功(PAID)数。
      *
-     * <p>用于「充值成功率/失败率」：按下单时间(create_time)分桶；
-     * 成功率=success/total，失败率=(total-success)/total。只要不是 SUCCESS 都算失败（含支付中超时、已关闭等）。</p>
+     * <p>数据源为 zhouyi 的 orders 表，按下单时间(create_time)分桶：发起充值=全部订单，成功=order_status='PAID'。
+     * 用于「充值成功率/失败率」：成功率=success/total，失败率=(total-success)/total（只要不是 PAID 都算失败，含支付中、已取消）。</p>
      */
     @Select("SELECT DATE(create_time) AS d, COUNT(*) AS total, "
-            + "SUM(CASE WHEN payment_status = 'SUCCESS' THEN 1 ELSE 0 END) AS success "
-            + "FROM payments WHERE create_time >= #{start} AND create_time < #{end} "
+            + "SUM(CASE WHEN order_status = 'PAID' THEN 1 ELSE 0 END) AS success "
+            + "FROM orders WHERE create_time >= #{start} AND create_time < #{end} "
             + "GROUP BY DATE(create_time) ORDER BY d")
     List<Map<String, Object>> paymentStatusDailyCount(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内按注册日统计：d=注册日, reg=注册用户数, pay=注册当天即成功付费的去重用户数。
+     *
+     * <p>用于「注册首日付费转化率」= pay ÷ reg ×100。</p>
+     */
+    @Select("SELECT DATE(u.createTime) AS d, COUNT(DISTINCT u.id) AS reg, "
+            + "COUNT(DISTINCT CASE WHEN p.user_id IS NOT NULL THEN u.id END) AS pay "
+            + "FROM `user` u "
+            + "LEFT JOIN payments p ON p.user_id = u.id AND p.payment_status = 'SUCCESS' "
+            + "  AND DATE(p.payment_time) = DATE(u.createTime) "
+            + "WHERE u.createTime >= #{start} AND u.createTime < #{end} "
+            + "GROUP BY DATE(u.createTime) ORDER BY d")
+    List<Map<String, Object>> firstDayPayDaily(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内注册用户（uid, d=注册日），用于「注册后阶段累计付费」同期群 */
+    @Select("SELECT id AS uid, DATE(createTime) AS d FROM `user` "
+            + "WHERE createTime >= #{start} AND createTime < #{end}")
+    List<Map<String, Object>> regUserDays(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内成功支付的（uid, d=支付日）去重，用于「注册后阶段累计付费」同期群 */
+    @Select("SELECT DISTINCT user_id AS uid, DATE(payment_time) AS d FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND user_id IS NOT NULL "
+            + "AND payment_time >= #{start} AND payment_time < #{end}")
+    List<Map<String, Object>> payUserDays(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内按「权益」(item_name) 聚合「充值成功的支付金额总和」：name=权益名称, amt=金额合计。
+     *
+     * <p>用于「付费流水权益占比」环形图。口径=充值成功的支付金额总和：
+     * payments 取 payment_status='SUCCESS' 的 payment_amount，按 payment_time 落区间，经 order_no 关联 orders 取权益名称。</p>
+     */
+    @Select("SELECT o.item_name AS name, IFNULL(SUM(p.payment_amount), 0) AS amt "
+            + "FROM payments p JOIN orders o ON o.order_no = p.order_no "
+            + "WHERE p.payment_status = 'SUCCESS' AND p.payment_time >= #{start} AND p.payment_time < #{end} "
+            + "GROUP BY o.item_name ORDER BY amt DESC")
+    List<Map<String, Object>> payAmountByBenefit(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内按天 × 权益(item_name) 聚合「充值成功的支付金额总和」：d=支付日, name=权益名称, amt=金额合计。
+     *
+     * <p>用于「付费流水构成（按权益）」多折线趋势图。口径=充值成功的支付金额总和：
+     * payments 取 payment_status='SUCCESS' 的 payment_amount，按 payment_time 落桶，经 order_no 关联 orders 取权益名称。</p>
+     */
+    @Select("SELECT DATE(p.payment_time) AS d, o.item_name AS name, IFNULL(SUM(p.payment_amount), 0) AS amt "
+            + "FROM payments p JOIN orders o ON o.order_no = p.order_no "
+            + "WHERE p.payment_status = 'SUCCESS' AND p.payment_time >= #{start} AND p.payment_time < #{end} "
+            + "GROUP BY DATE(p.payment_time), o.item_name ORDER BY d")
+    List<Map<String, Object>> payAmountByBenefitDaily(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 区间 [start,end) 内已支付订单的购买流水（uid=用户ID, name=权益名, t=下单时间，精确到时刻）。
+     *
+     * <p>用于「商品复购率」：在所选区间内，按购买时间(create_time)判定首购与复购
+     * （首次购买后，再次购买的时间与首购不同即为复购，含同日不同时刻）。
+     * 数据源为 zhouyi 的 orders 表，仅 order_status='PAID'。</p>
+     */
+    @Select("SELECT user_id AS uid, item_name AS name, create_time AS t "
+            + "FROM orders "
+            + "WHERE order_status = 'PAID' AND user_id IS NOT NULL "
+            + "AND create_time >= #{start} AND create_time < #{end} "
+            + "ORDER BY create_time")
+    List<Map<String, Object>> paidOrderStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
      * 全量「设备」首次出现时间（firstTime=该设备最早事件时间）。

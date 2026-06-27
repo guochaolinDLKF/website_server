@@ -47,6 +47,12 @@ public class AdminOperationLog implements Serializable {
 
     private String ip;
 
+    @Schema(description = "操作地区(高德IP定位)")
+    private String region;
+
+    @Schema(description = "是否异常(国外IP):1是0否")
+    private Integer abnormal;
+
     @Schema(description = "耗时(毫秒)")
     private Long costMs;
 

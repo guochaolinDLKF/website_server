@@ -23,6 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * 数据驾驶舱服务（读 zhouyi）。
@@ -1910,9 +1911,9 @@ public class DashboardService {
     /**
      * 充值成功率与失败率（按 天/周/月）：双百分比线。
      *
-     * <p>按下单时间(create_time)分桶统计充值订单（发起充值=全部充值订单）：
-     * 成功率 = 「充值成功」总次数(SUCCESS) ÷ 「发起充值」总次数 ×100；
-     * 失败率 = 「充值失败」总次数 ÷ 「发起充值」总次数 ×100，其中失败=只要不是 SUCCESS（含支付中超时、已关闭等）= 总数-成功数。
+     * <p>数据源=zhouyi orders 表，按下单时间(create_time)分桶统计充值订单（发起充值=全部订单）：
+     * 成功率 = 成功订单数(order_status='PAID') ÷ 发起充值总数 ×100；
+     * 失败率 = 失败订单数 ÷ 发起充值总数 ×100，其中失败=只要不是 PAID（含支付中、已取消）= 总数-成功数。
      * 故成功率 + 失败率 = 100%。订单总数为 0 的周期返回 null。end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
      */
     public Map<String, Object> paymentSuccessRateTrend(String dim, LocalDate start, LocalDate end) {
@@ -1982,6 +1983,636 @@ public class DashboardService {
         data.put("failLatest", failLatest);
         data.put("latestLabel", latestLabel);
         return data;
+    }
+
+    /**
+     * 付费流水权益占比：所选区间内「充值成功的支付金额总和」按「权益」(orders.item_name) 拆分，用于环形图。
+     *
+     * <p>口径=充值成功的支付金额总和：payments 取 payment_status='SUCCESS' 的 payment_amount，
+     * 按 payment_time 落区间，经 order_no 关联 orders 取权益名称。
+     * 返回 items=[{name, amount}]（按金额降序）+ total（总金额）。前端据 amount 计算占比（某权益占比=该权益金额÷总金额）。
+     * end 默认今日；start 默认 end 前 6 天（过去 7 天）。</p>
+     */
+    public Map<String, Object> payCompositionByBenefit(LocalDate start, LocalDate end) {
+        LocalDate today = LocalDate.now();
+        if (end == null || end.isAfter(today)) {
+            end = today;
+        }
+        if (start == null) {
+            start = end.minusDays(6);
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        List<Map<String, Object>> items = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        if (!start.isAfter(end)) {
+            for (Map<String, Object> row : dashboardMapper.payAmountByBenefit(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+                String name = row.get("name") == null ? "未知" : String.valueOf(row.get("name"));
+                BigDecimal amt = toBd(row.get("amt"));
+                Map<String, Object> it = new LinkedHashMap<>();
+                it.put("name", name);
+                it.put("amount", amt);
+                items.add(it);
+                total = total.add(amt);
+            }
+        }
+        data.put("items", items);
+        data.put("total", total);
+        return data;
+    }
+
+    /**
+     * 付费流水构成（按权益）趋势（按 天/周/月）：多折线，每条线一个权益。
+     *
+     * <p>口径=「充值成功的支付金额总和」：payments 取 payment_status='SUCCESS' 的 payment_amount，
+     * 按 payment_time 落桶，经 order_no 关联 orders 取权益名称。
+     * 返回 labels(周期) + benefits(权益名，按总额降序) + series(每权益按 labels 对齐的金额) + latestLabel。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> payAmountByBenefitTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        data.put("labels", new ArrayList<>());
+        data.put("benefits", new ArrayList<>());
+        data.put("series", new ArrayList<>());
+        data.put("latestLabel", "");
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        // 下单日 -> 权益 -> 金额
+        Map<LocalDate, Map<String, BigDecimal>> byDay = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.payAmountByBenefitDaily(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            String name = row.get("name") == null ? "未知" : String.valueOf(row.get("name"));
+            BigDecimal amt = toBd(row.get("amt"));
+            byDay.computeIfAbsent(d, k -> new HashMap<>()).merge(name, amt, BigDecimal::add);
+        }
+
+        // 按 dim 聚合到周期：periodKey -> 权益 -> 金额；同时统计各权益总额用于排序
+        Map<String, Map<String, BigDecimal>> periodBenefit = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        Map<String, BigDecimal> benefitTotal = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            Map<String, BigDecimal> pb = periodBenefit.computeIfAbsent(key, k -> new LinkedHashMap<>());
+            Map<String, BigDecimal> bs = byDay.get(d);
+            if (bs != null) {
+                for (Map.Entry<String, BigDecimal> e : bs.entrySet()) {
+                    pb.merge(e.getKey(), e.getValue(), BigDecimal::add);
+                    benefitTotal.merge(e.getKey(), e.getValue(), BigDecimal::add);
+                }
+            }
+        }
+
+        List<String> benefits = new ArrayList<>(benefitTotal.keySet());
+        benefits.sort((a, b) -> benefitTotal.getOrDefault(b, BigDecimal.ZERO).compareTo(benefitTotal.getOrDefault(a, BigDecimal.ZERO)));
+
+        List<String> keys = new ArrayList<>(periodBenefit.keySet());
+        List<String> labels = new ArrayList<>();
+        for (String key : keys) {
+            labels.add(keyLabel.get(key));
+        }
+
+        List<Map<String, Object>> series = new ArrayList<>();
+        for (String name : benefits) {
+            List<BigDecimal> arr = new ArrayList<>();
+            for (String key : keys) {
+                arr.add(periodBenefit.get(key).getOrDefault(name, BigDecimal.ZERO));
+            }
+            Map<String, Object> sObj = new LinkedHashMap<>();
+            sObj.put("name", name);
+            sObj.put("data", arr);
+            series.add(sObj);
+        }
+
+        data.put("labels", labels);
+        data.put("benefits", benefits);
+        data.put("series", series);
+        data.put("latestLabel", keys.isEmpty() ? "" : periodLabel(dim, keyDate.get(keys.get(keys.size() - 1))));
+        return data;
+    }
+
+    /**
+     * 商品复购率（按权益）趋势（按 天/周/月）：多折线，含「总体」线。
+     *
+     * <p>口径（数据源=zhouyi orders 表，仅 order_status='PAID'，购买时间=create_time）：
+     * 在所选区间内，某用户对某权益首次购买后，再次购买的时间与首购不同即记为复购（含同日不同时刻）。
+     * 某周期某权益复购率 = 该期内「下单时刻晚于其区间内首购时刻」的去重用户数 ÷ 该期购买该权益的去重用户数 ×100；
+     * 「总体」= 不分权益，用户在区间内的首次购买时间为基准判定。
+     * 返回 labels + benefits(「总体」在首，其余按购买用户数降序) + series(每项按 labels 对齐的复购率%) + latestLabel。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> productRepurchaseTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        data.put("labels", new ArrayList<>());
+        data.put("benefits", new ArrayList<>());
+        data.put("series", new ArrayList<>());
+        data.put("latestLabel", "");
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        final String TOTAL = "总体";
+        final String SEP = "|";
+        // 区间内已支付订单流水（带下单时刻）
+        List<Object[]> orders = new ArrayList<>();                  // [uid, name, LocalDateTime t]
+        Map<String, LocalDateTime> firstProduct = new HashMap<>();  // uid|name -> 区间内首购时刻
+        Map<String, LocalDateTime> firstAny = new HashMap<>();      // uid -> 区间内首次任意购买时刻
+        for (Map<String, Object> row : dashboardMapper.paidOrderStream(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            if (row.get("uid") == null || row.get("t") == null) {
+                continue;
+            }
+            String uid = String.valueOf(row.get("uid"));
+            String name = row.get("name") == null ? "未知" : String.valueOf(row.get("name"));
+            LocalDateTime t = toLdt(row.get("t"));
+            firstProduct.merge(uid + SEP + name, t, (a, b) -> a.isBefore(b) ? a : b);
+            firstAny.merge(uid, t, (a, b) -> a.isBefore(b) ? a : b);
+            orders.add(new Object[]{uid, name, t});
+        }
+
+        // 周期骨架 + 各期 购买者 / 复购者 集合
+        Map<String, Set<String>> anyBuyers = new LinkedHashMap<>();
+        Map<String, Set<String>> anyRepeat = new LinkedHashMap<>();
+        Map<String, Map<String, Set<String>>> prodBuyers = new LinkedHashMap<>();
+        Map<String, Map<String, Set<String>>> prodRepeat = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            anyBuyers.computeIfAbsent(key, k -> new HashSet<>());
+            anyRepeat.computeIfAbsent(key, k -> new HashSet<>());
+            prodBuyers.computeIfAbsent(key, k -> new LinkedHashMap<>());
+            prodRepeat.computeIfAbsent(key, k -> new LinkedHashMap<>());
+        }
+
+        for (Object[] o : orders) {
+            String uid = (String) o[0];
+            String name = (String) o[1];
+            LocalDateTime t = (LocalDateTime) o[2];
+            String key = (String) bucketOf(dim, t.toLocalDate())[0];
+            anyBuyers.get(key).add(uid);
+            prodBuyers.get(key).computeIfAbsent(name, k -> new HashSet<>()).add(uid);
+            // 复购：本次下单时刻晚于其区间内首购时刻（时间不一致）
+            if (t.isAfter(firstAny.get(uid))) {
+                anyRepeat.get(key).add(uid);
+            }
+            if (t.isAfter(firstProduct.get(uid + SEP + name))) {
+                prodRepeat.get(key).computeIfAbsent(name, k -> new HashSet<>()).add(uid);
+            }
+        }
+
+        List<String> keys = new ArrayList<>(keyLabel.keySet());
+        List<String> labels = new ArrayList<>();
+        for (String key : keys) {
+            labels.add(keyLabel.get(key));
+        }
+
+        // 权益列表（按区间内总购买用户数降序）
+        Map<String, Long> productBuyerTotal = new LinkedHashMap<>();
+        Set<String> productSet = new HashSet<>();
+        for (Map<String, Set<String>> m : prodBuyers.values()) {
+            for (Map.Entry<String, Set<String>> e : m.entrySet()) {
+                productSet.add(e.getKey());
+                productBuyerTotal.merge(e.getKey(), (long) e.getValue().size(), Long::sum);
+            }
+        }
+        List<String> products = new ArrayList<>(productSet);
+        products.sort((a, b) -> Long.compare(productBuyerTotal.getOrDefault(b, 0L), productBuyerTotal.getOrDefault(a, 0L)));
+
+        List<Map<String, Object>> series = new ArrayList<>();
+        List<String> benefits = new ArrayList<>();
+        benefits.add(TOTAL);
+        List<BigDecimal> totalData = new ArrayList<>();
+        for (String key : keys) {
+            totalData.add(rateOf(anyRepeat.get(key).size(), anyBuyers.get(key).size()));
+        }
+        Map<String, Object> totalObj = new LinkedHashMap<>();
+        totalObj.put("name", TOTAL);
+        totalObj.put("data", totalData);
+        series.add(totalObj);
+        for (String name : products) {
+            benefits.add(name);
+            List<BigDecimal> arr = new ArrayList<>();
+            for (String key : keys) {
+                Set<String> buyers = prodBuyers.get(key).get(name);
+                Set<String> repeat = prodRepeat.get(key).get(name);
+                arr.add(rateOf(repeat == null ? 0 : repeat.size(), buyers == null ? 0 : buyers.size()));
+            }
+            Map<String, Object> sObj = new LinkedHashMap<>();
+            sObj.put("name", name);
+            sObj.put("data", arr);
+            series.add(sObj);
+        }
+
+        data.put("labels", labels);
+        data.put("benefits", benefits);
+        data.put("series", series);
+        data.put("latestLabel", keys.isEmpty() ? "" : periodLabel(dim, keyDate.get(keys.get(keys.size() - 1))));
+        return data;
+    }
+
+    /** 复购率 = repeat ÷ buyers ×100（2 位小数）；buyers 为 0 返回 null。 */
+    private BigDecimal rateOf(int repeat, int buyers) {
+        if (buyers <= 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(repeat * 100.0 / buyers).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 每日活跃数据趋势（按 天/周/月）：DAU / WAU / MAU 三柱 + DAU/MAU 粘性折线。
+     *
+     * <p>活跃=custom_event 去重 creator。DAU=当日活跃；WAU=近 7 日滚动去重活跃；MAU=近 30 日滚动去重活跃；
+     * 粘性 DAU/MAU = DAU ÷ MAU ×100。按 dim 分桶时取桶内最后一天的快照值。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> activeTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        data.put("labels", new ArrayList<>());
+        data.put("dau", new ArrayList<>());
+        data.put("wau", new ArrayList<>());
+        data.put("mau", new ArrayList<>());
+        data.put("stickiness", new ArrayList<>());
+        data.put("dauLatest", null);
+        data.put("wauLatest", null);
+        data.put("mauLatest", null);
+        data.put("stickinessLatest", null);
+        data.put("latestLabel", "");
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        // 含历史 29 天，用于滚动 WAU/MAU
+        Map<LocalDate, Set<String>> dayActive = computeDailyActiveUsers(start.minusDays(29), end);
+        Map<LocalDate, long[]> dayMetric = new HashMap<>();   // day -> [dau, wau, mau]
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            long dau = dayActive.getOrDefault(d, Collections.emptySet()).size();
+            Set<String> w = new HashSet<>();
+            Set<String> m = new HashSet<>();
+            for (int i = 0; i < 30; i++) {
+                Set<String> s = dayActive.getOrDefault(d.minusDays(i), Collections.emptySet());
+                m.addAll(s);
+                if (i < 7) {
+                    w.addAll(s);
+                }
+            }
+            dayMetric.put(d, new long[]{dau, w.size(), m.size()});
+        }
+
+        // 按 dim 分桶，取桶内最后一天的快照
+        Map<String, long[]> bucketMetric = new LinkedHashMap<>();
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            bucketMetric.put(key, dayMetric.get(d));
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> dau = new ArrayList<>();
+        List<Long> wau = new ArrayList<>();
+        List<Long> mau = new ArrayList<>();
+        List<BigDecimal> stick = new ArrayList<>();
+        Long dauL = null;
+        Long wauL = null;
+        Long mauL = null;
+        BigDecimal stickL = null;
+        String latestLabel = "";
+        for (String key : keyLabel.keySet()) {
+            long[] mt = bucketMetric.get(key);
+            labels.add(keyLabel.get(key));
+            dau.add(mt[0]);
+            wau.add(mt[1]);
+            mau.add(mt[2]);
+            BigDecimal s = mt[2] > 0 ? BigDecimal.valueOf(mt[0] * 100.0 / mt[2]).setScale(2, RoundingMode.HALF_UP) : null;
+            stick.add(s);
+            dauL = mt[0];
+            wauL = mt[1];
+            mauL = mt[2];
+            stickL = s;
+            latestLabel = periodLabel(dim, keyDate.get(key));
+        }
+        data.put("labels", labels);
+        data.put("dau", dau);
+        data.put("wau", wau);
+        data.put("mau", mau);
+        data.put("stickiness", stick);
+        data.put("dauLatest", dauL);
+        data.put("wauLatest", wauL);
+        data.put("mauLatest", mauL);
+        data.put("stickinessLatest", stickL);
+        data.put("latestLabel", latestLabel);
+        return data;
+    }
+
+    /**
+     * 活跃用户生命周期天数构成（环形图）：所选区间内活跃用户，按「生命周期天数」拆分。
+     *
+     * <p>生命周期天数 = 区间结束日 − 用户注册日（天）；活跃=custom_event 去重 creator。
+     * 返回 items=[{name="N天", amount=人数}]（按人数降序，前 10 项 + 「其他」）+ total。
+     * end 默认今日；start 默认 end 前 6 天（过去 7 天）。</p>
+     */
+    public Map<String, Object> activeLifecycleDist(LocalDate start, LocalDate end) {
+        LocalDate today = LocalDate.now();
+        if (end == null || end.isAfter(today)) {
+            end = today;
+        }
+        if (start == null) {
+            start = end.minusDays(6);
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        List<Map<String, Object>> items = new ArrayList<>();
+        long total = 0;
+        if (!start.isAfter(end)) {
+            Map<Long, Long> byDays = new HashMap<>();
+            for (Map<String, Object> row : dashboardMapper.activeUserReg(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+                if (row.get("reg") == null) {
+                    continue;
+                }
+                LocalDate regDay = toLdt(row.get("reg")).toLocalDate();
+                long days = java.time.temporal.ChronoUnit.DAYS.between(regDay, end);
+                if (days < 0) {
+                    days = 0;
+                }
+                byDays.merge(days, 1L, Long::sum);
+                total++;
+            }
+            List<Map.Entry<Long, Long>> entries = new ArrayList<>(byDays.entrySet());
+            entries.sort((a, b) -> Long.compare(b.getValue(), a.getValue()));
+            long other = 0;
+            int i = 0;
+            for (Map.Entry<Long, Long> e : entries) {
+                if (i < 10) {
+                    Map<String, Object> it = new LinkedHashMap<>();
+                    it.put("name", e.getKey() + "天");
+                    it.put("amount", e.getValue());
+                    items.add(it);
+                } else {
+                    other += e.getValue();
+                }
+                i++;
+            }
+            if (other > 0) {
+                Map<String, Object> it = new LinkedHashMap<>();
+                it.put("name", "其他");
+                it.put("amount", other);
+                items.add(it);
+            }
+        }
+        data.put("items", items);
+        data.put("total", total);
+        return data;
+    }
+
+    /**
+     * 注册首日付费情况（按 天/周/月）：双指标——柱=首日付费玩家数，线=首日付费转化率。
+     *
+     * <p>首日付费玩家数 = 当期注册用户中、注册当天即成功付费的去重用户数（生命周期天数=0）；
+     * 首日付费转化率 = 首日付费玩家数 ÷ 当期注册用户数 ×100。
+     * 复用 emptyNewData 的 labels/bars/ratios 结构（bars=首日付费玩家数，ratios=转化率）。
+     * end 默认今日；day=近30天、week=近12周、month=近12个月。</p>
+     */
+    public Map<String, Object> firstDayPayTrend(String dim, LocalDate start, LocalDate end) {
+        LocalDate[] r = newDataRange(dim, start, end);
+        start = r[0];
+        end = r[1];
+        Map<String, Object> data = emptyNewData(dim);
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        Map<LocalDate, long[]> dayCnt = new HashMap<>();   // [reg, pay]
+        for (Map<String, Object> row : dashboardMapper.firstDayPayDaily(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            long reg = ((Number) row.get("reg")).longValue();
+            long pay = row.get("pay") == null ? 0 : ((Number) row.get("pay")).longValue();
+            dayCnt.put(d, new long[]{reg, pay});
+        }
+
+        Map<String, long[]> agg = new LinkedHashMap<>();   // key -> [reg, pay]
+        Map<String, String> keyLabel = new LinkedHashMap<>();
+        Map<String, LocalDate> keyDate = new LinkedHashMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            Object[] b = bucketOf(dim, d);
+            String key = (String) b[0];
+            keyLabel.putIfAbsent(key, (String) b[1]);
+            keyDate.putIfAbsent(key, (LocalDate) b[2]);
+            long[] cur = agg.computeIfAbsent(key, k -> new long[2]);
+            long[] dc = dayCnt.get(d);
+            if (dc != null) {
+                cur[0] += dc[0];
+                cur[1] += dc[1];
+            }
+        }
+
+        List<String> labels = new ArrayList<>();
+        List<Long> bars = new ArrayList<>();
+        List<BigDecimal> ratios = new ArrayList<>();
+        long barSum = 0;
+        Long barLatest = null;
+        BigDecimal ratioLatest = null;
+        String latestLabel = "";
+        for (String key : keyLabel.keySet()) {
+            long[] c = agg.get(key);
+            long reg = c[0];
+            long pay = c[1];
+            BigDecimal ratio = reg > 0 ? BigDecimal.valueOf(pay * 100.0 / reg).setScale(2, RoundingMode.HALF_UP) : null;
+            labels.add(keyLabel.get(key));
+            bars.add(pay);            // 首日付费玩家数
+            ratios.add(ratio);        // 首日付费转化率
+            barSum += pay;
+            barLatest = pay;
+            ratioLatest = ratio;
+            latestLabel = periodLabel(dim, keyDate.get(key));
+        }
+        data.put("labels", labels);
+        data.put("bars", bars);
+        data.put("ratios", ratios);
+        data.put("barLatest", barLatest);
+        data.put("ratioLatest", ratioLatest);
+        data.put("latestLabel", latestLabel);
+        data.put("barSum", barSum);
+        data.put("barMean", labels.isEmpty() ? null : BigDecimal.valueOf((double) barSum / labels.size()).setScale(2, RoundingMode.HALF_UP));
+        return data;
+    }
+
+    /**
+     * 注册后阶段累计付费人数（同期群表格，按 天/周/月）。
+     *
+     * <p>行=注册日同期群（按 dim 把注册日分到 天/周/月），列=注册用户数 + 注册后第 0..maxStage 个单位（天/周/月）。
+     * 每格三个数：第N单位付费人数(该偏移期成功付费的去重用户)、第N单位付费率(=该数÷注册数)、累计付费人数(注册当期至第N期内成功付费的去重用户)。
+     * 仅纳入「第 N 期已完整」的同期群（该期末 ≤ 今日）；未完整的格子返回 null。</p>
+     */
+    public Map<String, Object> regStagePayCohort(String dim, LocalDate start, LocalDate end, int maxStage) {
+        LocalDate today = LocalDate.now();
+        if (end == null || end.isAfter(today)) {
+            end = today;
+        }
+        if (start == null) {
+            if ("week".equalsIgnoreCase(dim)) {
+                start = mondayOf(end).minusWeeks(6);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                start = end.withDayOfMonth(1).minusMonths(6);
+            } else {
+                start = end.minusDays(6);
+            }
+        }
+        // 周/月维度把起始日对齐到周期起点，保证首个同期群完整
+        start = (LocalDate) bucketOf(dim, start)[2];
+        if (maxStage <= 0) {
+            maxStage = 7;
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        List<Integer> stages = new ArrayList<>();
+        for (int i = 0; i <= maxStage; i++) {
+            stages.add(i);
+        }
+        data.put("stages", stages);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        data.put("rows", rows);
+        if (start.isAfter(end)) {
+            data.put("summary", null);
+            return data;
+        }
+
+        // 同期群用户：cohortStart(按 dim) -> 用户集合
+        Map<LocalDate, Set<String>> cohortUsers = new TreeMap<>();
+        for (Map<String, Object> row : dashboardMapper.regUserDays(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            Object uid = row.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            LocalDate cs = (LocalDate) bucketOf(dim, d)[2];
+            cohortUsers.computeIfAbsent(cs, k -> new HashSet<>()).add(String.valueOf(uid));
+        }
+
+        // 付费日集合：uid -> 成功支付日集合（范围覆盖到最晚同期群的最大阶段末）
+        LocalDate lastCohortStart = (LocalDate) bucketOf(dim, end)[2];
+        LocalDate payEnd = stageRange(dim, lastCohortStart, maxStage)[1];
+        Map<String, Set<LocalDate>> userPayDays = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.payUserDays(start.atStartOfDay(), payEnd.plusDays(1).atStartOfDay())) {
+            Object uid = row.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            userPayDays.computeIfAbsent(String.valueOf(uid), k -> new HashSet<>()).add(d);
+        }
+
+        long sumReg = 0;
+        long[] sumDay = new long[maxStage + 1];
+        long[] sumCum = new long[maxStage + 1];
+
+        for (Map.Entry<LocalDate, Set<String>> ent : cohortUsers.entrySet()) {
+            LocalDate cs = ent.getKey();
+            Set<String> users = ent.getValue();
+            int reg = users.size();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", cs.toString());
+            row.put("label", periodLabel(dim, cs));
+            row.put("reg", reg);
+            List<Map<String, Object>> cells = new ArrayList<>();
+            sumReg += reg;
+            for (int n = 0; n <= maxStage; n++) {
+                LocalDate[] sr = stageRange(dim, cs, n);
+                LocalDate sStart = sr[0];
+                LocalDate sEnd = sr[1];
+                Map<String, Object> cell = new LinkedHashMap<>();
+                if (sEnd.isAfter(today)) {
+                    // 第 N 期尚未完整
+                    cell.put("day", null);
+                    cell.put("rate", null);
+                    cell.put("cum", null);
+                    cells.add(cell);
+                    continue;
+                }
+                int dayCount = 0;
+                int cumCount = 0;
+                for (String uid : users) {
+                    Set<LocalDate> pays = userPayDays.get(uid);
+                    if (pays == null) {
+                        continue;
+                    }
+                    if (paidInRange(pays, sStart, sEnd)) {
+                        dayCount++;
+                    }
+                    if (paidInRange(pays, cs, sEnd)) {
+                        cumCount++;
+                    }
+                }
+                BigDecimal rate = reg > 0 ? BigDecimal.valueOf(dayCount * 100.0 / reg).setScale(2, RoundingMode.HALF_UP) : null;
+                cell.put("day", dayCount);
+                cell.put("rate", rate);
+                cell.put("cum", cumCount);
+                cells.add(cell);
+                sumDay[n] += dayCount;
+                sumCum[n] += cumCount;
+            }
+            row.put("cells", cells);
+            rows.add(row);
+        }
+
+        // 汇总行（阶段值）：注册总数 + 各阶段 当期付费数合计/当期付费率/累计付费数合计
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("reg", sumReg);
+        List<Map<String, Object>> sumCells = new ArrayList<>();
+        for (int n = 0; n <= maxStage; n++) {
+            Map<String, Object> cell = new LinkedHashMap<>();
+            cell.put("day", sumDay[n]);
+            cell.put("rate", sumReg > 0 ? BigDecimal.valueOf(sumDay[n] * 100.0 / sumReg).setScale(2, RoundingMode.HALF_UP) : null);
+            cell.put("cum", sumCum[n]);
+            sumCells.add(cell);
+        }
+        summary.put("cells", sumCells);
+        data.put("summary", summary);
+        return data;
+    }
+
+    /** 同期群阶段区间：给定 dim、同期群起点与偏移 n，返回该阶段的 [起,止]（含）。 */
+    private LocalDate[] stageRange(String dim, LocalDate cohortStart, int n) {
+        if ("week".equalsIgnoreCase(dim)) {
+            LocalDate s = cohortStart.plusWeeks(n);
+            return new LocalDate[]{s, s.plusDays(6)};
+        }
+        if ("month".equalsIgnoreCase(dim)) {
+            LocalDate s = cohortStart.plusMonths(n);
+            return new LocalDate[]{s, s.plusMonths(1).minusDays(1)};
+        }
+        LocalDate s = cohortStart.plusDays(n);
+        return new LocalDate[]{s, s};
+    }
+
+    /** 用户的成功支付日集合中是否存在落在 [from,to]（含）内的支付日。 */
+    private boolean paidInRange(Set<LocalDate> pays, LocalDate from, LocalDate to) {
+        for (LocalDate d : pays) {
+            if (!d.isBefore(from) && !d.isAfter(to)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private LocalDate mondayOf(LocalDate d) {

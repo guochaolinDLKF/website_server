@@ -24,6 +24,12 @@
         <el-table-column prop="requestMethod" label="方法" width="80" />
         <el-table-column prop="requestUri" label="接口" min-width="200" show-overflow-tooltip />
         <el-table-column prop="ip" label="IP" width="140" />
+        <el-table-column label="操作地区" min-width="140">
+          <template #default="{ row }">
+            <span :style="{ color: row.abnormal === 1 ? '#f56c6c' : '' }">{{ row.region || '—' }}</span>
+            <el-tag v-if="row.abnormal === 1" type="danger" size="small" effect="dark" style="margin-left: 6px">异常</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="costMs" label="耗时(ms)" width="100" />
         <el-table-column label="结果" width="90">
           <template #default="{ row }">

@@ -99,6 +99,41 @@ export function getPaymentSuccessRateTrend(params = { dim: 'day' }) {
   return request.get('/dashboard/payment-success-rate-trend', { params })
 }
 
+// 注册首日付费转化率（单百分比线）：{ dim, start, end }
+export function getFirstDayPayTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/first-day-pay-trend', { params })
+}
+
+// 注册后阶段累计付费人数（同期群表格）：{ start, end, maxStage }
+export function getRegStagePayCohort(params = {}) {
+  return request.get('/dashboard/reg-stage-pay-cohort', { params })
+}
+
+// 付费流水构成（按权益）环形图：{ start, end }
+export function getPayCompositionByBenefit(params = {}) {
+  return request.get('/dashboard/pay-composition-benefit', { params })
+}
+
+// 付费流水构成（按权益）多折线趋势：{ dim, start, end }
+export function getPayBenefitTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/pay-benefit-trend', { params })
+}
+
+// 商品复购率（按权益，含总体）多折线趋势：{ dim, start, end }
+export function getProductRepurchaseTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/product-repurchase-trend', { params })
+}
+
+// 每日活跃数据（DAU/WAU/MAU + DAU/MAU 粘性）：{ dim, start, end }
+export function getActiveTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/active-trend', { params })
+}
+
+// 活跃用户生命周期天数构成（环形图）：{ start, end }
+export function getActiveLifecycleDist(params = {}) {
+  return request.get('/dashboard/active-lifecycle-dist', { params })
+}
+
 export function getIncomeTrend(days = 30) {
   return request.get('/dashboard/income-trend', { params: { days } })
 }

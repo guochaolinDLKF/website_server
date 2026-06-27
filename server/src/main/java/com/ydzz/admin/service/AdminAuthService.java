@@ -1,6 +1,8 @@
 package com.ydzz.admin.service;
 
 import cn.dev33.satoken.SaManager;
+import cn.hutool.captcha.CaptchaUtil;
+import cn.hutool.captcha.LineCaptcha;
 import cn.hutool.crypto.digest.BCrypt;
 import com.ydzz.admin.config.AdminStpUtil;
 import com.ydzz.admin.dto.AdminInfoVo;
@@ -10,12 +12,17 @@ import com.ydzz.admin.entity.AdminUser;
 import com.ydzz.admin.mapper.AdminUserMapper;
 import com.ydzz.common.ErrorCode;
 import com.ydzz.exception.BusinessException;
-import com.ydzz.util.ClientIpUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 后台认证服务：登录、登出、当前信息、改密。
@@ -32,19 +39,63 @@ public class AdminAuthService {
     private final AdminRbacService rbacService;
     private final AdminPermissionService permissionService;
     private final AdminLogService logService;
+    private final IpRegionService ipRegionService;
+    private final StringRedisTemplate stringRedisTemplate;
+
+    /** 验证码 Redis key 前缀 */
+    private static final String CAPTCHA_KEY_PREFIX = "admin:captcha:";
+    /** 验证码有效期（分钟） */
+    private static final long CAPTCHA_TTL_MINUTES = 2;
 
     public AdminAuthService(AdminUserMapper adminUserMapper, AdminUserService adminUserService,
                             AdminRbacService rbacService, AdminPermissionService permissionService,
-                            AdminLogService logService) {
+                            AdminLogService logService, IpRegionService ipRegionService,
+                            StringRedisTemplate stringRedisTemplate) {
         this.adminUserMapper = adminUserMapper;
         this.adminUserService = adminUserService;
         this.rbacService = rbacService;
         this.permissionService = permissionService;
         this.logService = logService;
+        this.ipRegionService = ipRegionService;
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    /**
+     * 生成图形验证码。
+     *
+     * @return { captchaId, image(base64 data url) }
+     */
+    public Map<String, String> generateCaptcha() {
+        LineCaptcha captcha = CaptchaUtil.createLineCaptcha(120, 40, 4, 20);
+        String id = UUID.randomUUID().toString().replace("-", "");
+        stringRedisTemplate.opsForValue().set(CAPTCHA_KEY_PREFIX + id, captcha.getCode(), CAPTCHA_TTL_MINUTES, TimeUnit.MINUTES);
+        Map<String, String> data = new LinkedHashMap<>();
+        data.put("captchaId", id);
+        data.put("image", captcha.getImageBase64Data());
+        return data;
+    }
+
+    /** 校验图形验证码（一次性，校验后即删除）；不通过抛业务异常 */
+    private void verifyCaptcha(String captchaId, String captcha) {
+        if (!StringUtils.hasText(captchaId) || !StringUtils.hasText(captcha)) {
+            throw new BusinessException(ErrorCode.BadRequest, "请输入验证码");
+        }
+        String key = CAPTCHA_KEY_PREFIX + captchaId;
+        String saved = stringRedisTemplate.opsForValue().get(key);
+        stringRedisTemplate.delete(key);
+        if (saved == null) {
+            throw new BusinessException(ErrorCode.BadRequest, "验证码已过期，请刷新后重试");
+        }
+        if (!saved.equalsIgnoreCase(captcha)) {
+            throw new BusinessException(ErrorCode.BadRequest, "验证码错误");
+        }
     }
 
     public AdminLoginVo login(AdminLoginRequest req, HttpServletRequest request) {
-        String ip = ClientIpUtil.getClientIp(request);
+        // 1. 先校验图形验证码（一次性）
+        verifyCaptcha(req.getCaptchaId(), req.getCaptcha());
+
+        String ip = ipRegionService.resolvePublicIp(request);
         String ua = request.getHeader("User-Agent");
 
         AdminUser user = adminUserService.getByUsername(req.getUsername());
@@ -85,7 +136,7 @@ public class AdminAuthService {
             AdminUser user = adminUserMapper.selectById(Long.valueOf(loginId.toString()));
             String username = user == null ? null : user.getUsername();
             logService.saveLoginLog(user == null ? null : user.getId(), username,
-                    ClientIpUtil.getClientIp(request), request.getHeader("User-Agent"),
+                    ipRegionService.resolvePublicIp(request), request.getHeader("User-Agent"),
                     2, 1, "登出成功");
         }
         AdminStpUtil.logout();

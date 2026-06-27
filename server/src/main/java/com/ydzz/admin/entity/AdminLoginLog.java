@@ -31,6 +31,12 @@ public class AdminLoginLog implements Serializable {
 
     private String loginIp;
 
+    @Schema(description = "登录地区(高德IP定位)")
+    private String loginRegion;
+
+    @Schema(description = "是否异常登录(国外IP):1是0否")
+    private Integer abnormal;
+
     private String userAgent;
 
     @Schema(description = "1登录 2登出")

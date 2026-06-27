@@ -63,20 +63,4 @@ public class AdminRoleController {
         roleService.removeById(id);
         return Result.success("删除成功", "ok");
     }
-
-    @Operation(summary = "查询角色已分配的权限ID")
-    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "role:assign")
-    @GetMapping("/{id}/permissions")
-    public Result<List<Long>> permissions(@PathVariable Long id) {
-        return Result.success(roleService.listPermissionIds(id));
-    }
-
-    @Operation(summary = "给角色分配权限")
-    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "role:assign")
-    @OperationLog(module = "角色管理", operation = "分配权限")
-    @PostMapping("/{id}/permissions")
-    public Result<String> assign(@PathVariable Long id, @RequestBody List<Long> permissionIds) {
-        roleService.assignPermissions(id, permissionIds);
-        return Result.success("分配成功", "ok");
-    }
 }

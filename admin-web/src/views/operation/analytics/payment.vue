@@ -89,15 +89,82 @@
         />
       </el-col>
     </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <DualMetricCard
+          title="注册首日付费情况"
+          :tip="firstDayPayTip"
+          bar-name="首日付费玩家数"
+          bar-unit="人"
+          ratio-name="首日付费转化率"
+          :api="getFirstDayPayTrend"
+          default-preset="past7"
+        />
+      </el-col>
+      <el-col :xs="24" :md="12">
+        <CohortPayTable
+          title="注册后阶段累计付费人数"
+          :tip="cohortPayTip"
+          :max-stage="7"
+          :api="getRegStagePayCohort"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
+
+    <el-card class="page-card pay-header-card" shadow="never" style="margin-top: 16px">
+      <div class="pay-h-title">付费内容构成</div>
+      <div class="pay-h-sub">了解各个权益的售卖情况</div>
+    </el-card>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="24">
+        <DonutCompositionCard
+          title="付费流水权益占比"
+          :tip="compositionTip"
+          chart-title="付费事件·支付金额总和"
+          :api="getPayCompositionByBenefit"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="24">
+        <BenefitTrendCard
+          title="付费流水构成（按权益）"
+          :tip="benefitTrendTip"
+          :api="getPayBenefitTrend"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="24">
+        <BenefitTrendCard
+          title="商品复购率"
+          :tip="repurchaseTip"
+          :api="getProductRepurchaseTrend"
+          value-type="percent"
+          :default-visible="4"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { InfoFilled } from '@element-plus/icons-vue'
-import { getPayOverview, getPayTrend, getArpuTrend, getPayUserSegmentTrend, getPaymentSuccessRateTrend } from '@/api/dashboard'
+import { getPayOverview, getPayTrend, getArpuTrend, getPayUserSegmentTrend, getPaymentSuccessRateTrend, getFirstDayPayTrend, getRegStagePayCohort, getPayCompositionByBenefit, getPayBenefitTrend, getProductRepurchaseTrend } from '@/api/dashboard'
 import DualMetricCard from '../../dashboard/DualMetricCard.vue'
 import DualLineCard from '../../dashboard/DualLineCard.vue'
+import CohortPayTable from '../../dashboard/CohortPayTable.vue'
+import DonutCompositionCard from '../../dashboard/DonutCompositionCard.vue'
+import BenefitTrendCard from '../../dashboard/BenefitTrendCard.vue'
 
 // 标题悬停提示：数据计算口径
 const payTrendTip =
@@ -117,10 +184,38 @@ const paySegmentTip =
   '（新老按所选时间范围统一判定；同一人在同一周期只算一次）'
 
 const successRateTip =
-  '按下单时间统计这段时间的充值订单（发起充值=全部充值订单）：\n' +
-  '成功率 = 充值成功的次数 ÷ 发起充值的次数 × 100%\n' +
-  '失败率 = 充值失败的次数 ÷ 发起充值的次数 × 100%\n' +
-  '（只要不是成功都算失败，含支付中超时、已关闭等；成功率 + 失败率 = 100%）'
+  '数据取自订单表，按下单时间统计这段时间的充值订单（发起充值=全部订单）：\n' +
+  '成功率 = 成功订单数(已支付) ÷ 发起充值订单数 × 100%\n' +
+  '失败率 = 失败订单数 ÷ 发起充值订单数 × 100%\n' +
+  '（只要不是已支付都算失败，含支付中、已取消；成功率 + 失败率 = 100%）'
+
+const firstDayPayTip =
+  '两个指标（按注册日统计，同一人只算一次）：\n' +
+  '首日付费玩家数 = 当天注册、且注册当天就充值成功的去重人数\n' +
+  '首日付费转化率 = 首日付费玩家数 ÷ 当天注册人数 × 100%'
+
+const repurchaseTip =
+  '各权益（及「总体」）的复购率随时间变化（每条线一个权益，纵轴为百分比）\n' +
+  '数据取自订单表（已支付订单）。在所选时间范围内，用户对某权益首次购买后，只要再次购买的时间与首购不同就算复购（含同一天不同时刻）\n' +
+  '某权益复购率 = 当期发生复购的人数 ÷ 当期购买该权益的人数 × 100%；总体=不分权益、按区间内首次购买时间判定\n' +
+  '「分组」可勾选要显示的线（默认显示总体+购买人数最多的几个权益）'
+
+const benefitTrendTip =
+  '所选时间段内，「充值成功的支付金额总和」按「权益」分别画成折线（每条线一个权益）\n' +
+  '金额取充值成功的支付金额（payments 中 payment_status=SUCCESS），按支付时间分到各天/周/月\n' +
+  '「分组」可勾选要显示的权益；纵轴为该权益当期充值成功支付金额合计'
+
+const compositionTip =
+  '所选时间段内，「充值成功的支付金额总和」按「权益」拆分的占比（环形图）\n' +
+  '金额取充值成功的支付金额（payments 中 payment_status=SUCCESS），按支付时间归入区间\n' +
+  '权益 = 订单购买的功能/内容（如绿色无广告、五行知识等）\n' +
+  '某权益占比 = 该权益充值成功支付金额 ÷ 全部权益充值成功支付金额合计 × 100%'
+
+const cohortPayTip =
+  '按注册时间分组（左上「按天/按周/按月」切换），看每批新用户在注册后第 N 个单位（天/周/月）的付费情况：\n' +
+  '指标·留存：每格=累计付费人数（注册当期到第N期内付费成功的去重人数）/ 累计付费率（÷该批注册人数）/ 当期付费人数\n' +
+  '指标·流失：每格=累计未付费人数（该批注册人数−累计付费人数）/ 累计流失率（=100%−累计付费率）/ 当期付费人数\n' +
+  '颜色越深代表当前指标的占比越高；第N期还没结束的格子显示「—」'
 
 const stats = reactive({})
 
