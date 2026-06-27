@@ -11,7 +11,7 @@
  Target Server Version : 80045
  File Encoding         : 65001
 
- Date: 26/06/2026 23:07:19
+ Date: 27/06/2026 21:48:47
 */
 
 SET NAMES utf8mb4;
@@ -36,23 +36,36 @@ CREATE TABLE `admin_login_log`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_admin`(`admin_id`) USING BTREE,
   INDEX `idx_time`(`login_time`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台登录日志' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 28 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台登录日志' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_login_log
 -- ----------------------------
-INSERT INTO `admin_login_log` VALUES (1, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:15');
-INSERT INTO `admin_login_log` VALUES (2, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:21');
-INSERT INTO `admin_login_log` VALUES (3, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:03:59');
-INSERT INTO `admin_login_log` VALUES (4, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:11:47');
-INSERT INTO `admin_login_log` VALUES (5, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 16:27:21');
-INSERT INTO `admin_login_log` VALUES (6, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:36');
-INSERT INTO `admin_login_log` VALUES (7, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:59');
-INSERT INTO `admin_login_log` VALUES (8, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:25:07');
-INSERT INTO `admin_login_log` VALUES (9, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:36:47');
-INSERT INTO `admin_login_log` VALUES (10, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:18:31');
-INSERT INTO `admin_login_log` VALUES (11, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:33:57');
-INSERT INTO `admin_login_log` VALUES (12, 1, 'admin', '0:0:0:0:0:0:0:1', 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:58:46');
+INSERT INTO `admin_login_log` VALUES (1, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:15');
+INSERT INTO `admin_login_log` VALUES (2, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 10:57:21');
+INSERT INTO `admin_login_log` VALUES (3, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:03:59');
+INSERT INTO `admin_login_log` VALUES (4, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 11:11:47');
+INSERT INTO `admin_login_log` VALUES (5, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-24 16:27:21');
+INSERT INTO `admin_login_log` VALUES (6, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:36');
+INSERT INTO `admin_login_log` VALUES (7, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 20:44:59');
+INSERT INTO `admin_login_log` VALUES (8, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:25:07');
+INSERT INTO `admin_login_log` VALUES (9, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 21:36:47');
+INSERT INTO `admin_login_log` VALUES (10, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:18:31');
+INSERT INTO `admin_login_log` VALUES (11, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:33:57');
+INSERT INTO `admin_login_log` VALUES (12, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-26 22:58:46');
+INSERT INTO `admin_login_log` VALUES (13, 1, 'admin', '0:0:0:0:0:0:0:1', NULL, 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 11:16:23');
+INSERT INTO `admin_login_log` VALUES (16, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 2, 1, '登出成功', '2026-06-27 19:58:07');
+INSERT INTO `admin_login_log` VALUES (17, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 19:58:11');
+INSERT INTO `admin_login_log` VALUES (18, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 0, '账号或密码错误', '2026-06-27 20:08:15');
+INSERT INTO `admin_login_log` VALUES (19, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 2, 1, '登出成功', '2026-06-27 20:25:24');
+INSERT INTO `admin_login_log` VALUES (20, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 20:25:39');
+INSERT INTO `admin_login_log` VALUES (21, 2, 'member_test', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT; Windows NT 10.0; zh-CN) WindowsPowerShell/5.1.19041.6456', 1, 1, '登录成功', '2026-06-27 20:48:40');
+INSERT INTO `admin_login_log` VALUES (22, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 2, 1, '登出成功', '2026-06-27 20:49:38');
+INSERT INTO `admin_login_log` VALUES (23, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 20:49:48');
+INSERT INTO `admin_login_log` VALUES (24, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 2, 1, '登出成功', '2026-06-27 21:28:10');
+INSERT INTO `admin_login_log` VALUES (25, 3, 'chaolin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 21:28:22');
+INSERT INTO `admin_login_log` VALUES (26, 3, 'chaolin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 2, 1, '登出成功', '2026-06-27 21:28:40');
+INSERT INTO `admin_login_log` VALUES (27, 1, 'admin', '183.254.112.65', '海南省海口市', 0, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36', 1, 1, '登录成功', '2026-06-27 21:28:52');
 
 -- ----------------------------
 -- Table structure for admin_operation_log
@@ -79,14 +92,21 @@ CREATE TABLE `admin_operation_log`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_admin`(`admin_id`) USING BTREE,
   INDEX `idx_time`(`create_time`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台操作日志' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 11 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台操作日志' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_operation_log
 -- ----------------------------
-INSERT INTO `admin_operation_log` VALUES (1, 1, 'admin', '商品管理', '保存商品', 'com.ydzz.admin.business.controller.GoodsController.save', '/api/admin/goods', 'POST', '[{\"id\":20,\"itemDesc\":\"命宫、身宫设置\",\"itemDiscount\":1,\"itemId\":\"10020\",\"itemPrice\":1,\"itemType\":3}]', NULL, '0:0:0:0:0:0:0:1', 103, 1, NULL, '2026-06-24 11:36:40');
-INSERT INTO `admin_operation_log` VALUES (2, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/5', 'DELETE', '[5]', NULL, '0:0:0:0:0:0:0:1', 358, 1, NULL, '2026-06-24 13:30:47');
-INSERT INTO `admin_operation_log` VALUES (3, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/4', 'DELETE', '[4]', NULL, '0:0:0:0:0:0:0:1', 5, 1, NULL, '2026-06-24 13:30:51');
+INSERT INTO `admin_operation_log` VALUES (1, 1, 'admin', '商品管理', '保存商品', 'com.ydzz.admin.business.controller.GoodsController.save', '/api/admin/goods', 'POST', '[{\"id\":20,\"itemDesc\":\"命宫、身宫设置\",\"itemDiscount\":1,\"itemId\":\"10020\",\"itemPrice\":1,\"itemType\":3}]', NULL, '0:0:0:0:0:0:0:1', NULL, 0, 103, 1, NULL, '2026-06-24 11:36:40');
+INSERT INTO `admin_operation_log` VALUES (2, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/5', 'DELETE', '[5]', NULL, '0:0:0:0:0:0:0:1', NULL, 0, 358, 1, NULL, '2026-06-24 13:30:47');
+INSERT INTO `admin_operation_log` VALUES (3, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/4', 'DELETE', '[4]', NULL, '0:0:0:0:0:0:0:1', NULL, 0, 5, 1, NULL, '2026-06-24 13:30:51');
+INSERT INTO `admin_operation_log` VALUES (4, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/3', 'DELETE', '[3]', NULL, '0:0:0:0:0:0:0:1', NULL, 0, 317, 1, NULL, '2026-06-27 09:47:07');
+INSERT INTO `admin_operation_log` VALUES (5, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/2', 'DELETE', '[2]', NULL, '183.254.112.65', '海南省海口市', 0, 171, 1, NULL, '2026-06-27 19:58:33');
+INSERT INTO `admin_operation_log` VALUES (6, 1, 'admin', '角色管理', '保存角色', 'com.ydzz.admin.controller.AdminRoleController.save', '/api/admin/role', 'POST', '[{\"description\":\"\",\"roleCode\":\"2\",\"roleName\":\"管理员\",\"sortOrder\":0,\"status\":1}]', NULL, '183.254.112.65', '海南省海口市', 0, 115, 1, NULL, '2026-06-27 19:59:53');
+INSERT INTO `admin_operation_log` VALUES (7, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/6', 'DELETE', '[6]', NULL, '183.254.112.65', '海南省海口市', 0, 46, 1, NULL, '2026-06-27 20:50:00');
+INSERT INTO `admin_operation_log` VALUES (8, 1, 'admin', '角色管理', '删除角色', 'com.ydzz.admin.controller.AdminRoleController.remove', '/api/admin/role/7', 'DELETE', '[7]', NULL, '183.254.112.65', '海南省海口市', 0, 29, 1, NULL, '2026-06-27 20:50:03');
+INSERT INTO `admin_operation_log` VALUES (9, 1, 'admin', '管理员管理', '删除管理员', 'com.ydzz.admin.controller.AdminUserController.remove', '/api/admin/admin-user/2', 'DELETE', '[2]', NULL, '183.254.112.65', '海南省海口市', 0, 709, 1, NULL, '2026-06-27 20:59:12');
+INSERT INTO `admin_operation_log` VALUES (10, 1, 'admin', '管理员管理', '保存管理员', 'com.ydzz.admin.controller.AdminUserController.save', '/api/admin/admin-user', 'POST', '[{\"password\":\"******\",\"realName\":\"郭超林\",\"status\":1,\"username\":\"chaolin\"}]', NULL, '183.254.112.65', '海南省海口市', 0, 1212, 1, NULL, '2026-06-27 21:27:22');
 
 -- ----------------------------
 -- Table structure for admin_permission
@@ -108,7 +128,7 @@ CREATE TABLE `admin_permission`  (
   `deleted` tinyint(0) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_parent`(`parent_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 50 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台权限/菜单' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 53 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台权限/菜单' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_permission
@@ -138,14 +158,14 @@ INSERT INTO `admin_permission` VALUES (37, 'analytics:income', '收入分析', 1
 INSERT INTO `admin_permission` VALUES (38, 'analytics:func', '功能分析', 1, 35, '/analytics/func', NULL, '', 3, 1, '2026-06-24 10:49:42', '2026-06-26 09:44:59', 1);
 INSERT INTO `admin_permission` VALUES (39, 'analytics:realtime', '实时数据', 1, 35, '/analytics/realtime', NULL, '', 4, 1, '2026-06-26 09:35:07', '2026-06-26 09:35:07', 0);
 INSERT INTO `admin_permission` VALUES (40, 'system:menu', '系统管理', 1, 0, '/system', NULL, 'Setting', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_permission` VALUES (41, 'admin:list', '管理员管理', 2, 40, '/system/admin', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (41, 'admin:list', '管理员管理', 2, 40, '/system/admin', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-27 21:25:20', 0);
 INSERT INTO `admin_permission` VALUES (42, 'admin:edit', '编辑管理员', 2, 41, '', NULL, '', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_permission` VALUES (43, 'role:list', '成员管理', 1, 40, '/system/role', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_permission` VALUES (43, 'role:list', '成员管理', 1, 40, '/system/role', NULL, '', 2, 1, '2026-06-24 10:49:42', '2026-06-27 21:25:20', 0);
 INSERT INTO `admin_permission` VALUES (48, 'log:login', '登录日志', 1, 40, '/system/login-log', NULL, '', 5, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (49, 'log:operation', '操作日志', 1, 40, '/system/operation-log', NULL, '', 6, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
 INSERT INTO `admin_permission` VALUES (50, 'analytics:newdata', '新增数据', 1, 35, '/analytics/newdata', NULL, '', 2, 1, '2026-06-26 21:23:33', '2026-06-26 21:23:33', 0);
 INSERT INTO `admin_permission` VALUES (51, 'analytics:payanalysis', '付费分析', 1, 35, '/analytics/payment', NULL, '', 3, 1, '2026-06-26 22:31:13', '2026-06-26 22:31:13', 0);
-INSERT INTO `admin_permission` VALUES (52, 'analytics:active', '活跃数据', 1, 35, '/analytics/active', NULL, '', 5, 1, '2026-06-27 09:44:00', '2026-06-27 09:44:00', 0);
+INSERT INTO `admin_permission` VALUES (52, 'analytics:active', '活跃数据', 1, 35, '/analytics/active', NULL, '', 5, 1, '2026-06-27 16:05:55', '2026-06-27 16:05:55', 0);
 
 -- ----------------------------
 -- Table structure for admin_role
@@ -163,17 +183,18 @@ CREATE TABLE `admin_role`  (
   `deleted` tinyint(0) NOT NULL DEFAULT 0,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_role_code`(`role_code`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 6 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台角色' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台角色' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_role
 -- ----------------------------
 INSERT INTO `admin_role` VALUES (1, 'SUPER_ADMIN', '超级管理员', '拥有全部权限', 1, 1, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_role` VALUES (2, 'OPERATOR', '运营', '运营人员，内容/功能/活动编辑，数据查看', 1, 2, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
-INSERT INTO `admin_role` VALUES (3, 'SERVICE', '客服', '用户查看与禁用，订单查看', 1, 3, '2026-06-24 10:49:42', '2026-06-24 10:49:42', 0);
+INSERT INTO `admin_role` VALUES (2, 'OPERATOR', '运营', '运营人员，内容/功能/活动编辑，数据查看', 1, 2, '2026-06-24 10:49:42', '2026-06-27 19:58:32', 1);
+INSERT INTO `admin_role` VALUES (3, 'SERVICE', '客服', '用户查看与禁用，订单查看', 1, 3, '2026-06-24 10:49:42', '2026-06-27 09:47:07', 1);
 INSERT INTO `admin_role` VALUES (4, 'FINANCE', '财务', '订单/退款/收入相关', 1, 4, '2026-06-24 10:49:42', '2026-06-24 13:30:51', 1);
 INSERT INTO `admin_role` VALUES (5, 'ANALYST', '数据分析', '数据分析查看', 1, 5, '2026-06-24 10:49:42', '2026-06-24 13:30:47', 1);
-INSERT INTO `admin_role` VALUES (7, 'MEMBER', '普通成员', '普通成员：除角色增删改外拥有全部权限', 1, 7, '2026-06-27 12:00:00', '2026-06-27 12:00:00', 0);
+INSERT INTO `admin_role` VALUES (6, '2', '管理员', '', 1, 0, '2026-06-27 19:59:53', '2026-06-27 20:49:59', 1);
+INSERT INTO `admin_role` VALUES (7, 'MEMBER', '普通成员', '普通成员：除角色增删改外拥有全部权限', 1, 7, '2026-06-27 20:36:24', '2026-06-27 20:50:03', 1);
 
 -- ----------------------------
 -- Table structure for admin_role_permission
@@ -187,7 +208,7 @@ CREATE TABLE `admin_role_permission`  (
   UNIQUE INDEX `uk_role_perm`(`role_id`, `permission_id`) USING BTREE,
   INDEX `idx_role`(`role_id`) USING BTREE,
   INDEX `idx_perm`(`permission_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 35 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '角色权限关联' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 102 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '角色权限关联' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_role_permission
@@ -218,9 +239,38 @@ INSERT INTO `admin_role_permission` VALUES (30, 1, 49);
 INSERT INTO `admin_role_permission` VALUES (36, 1, 50);
 INSERT INTO `admin_role_permission` VALUES (37, 1, 51);
 INSERT INTO `admin_role_permission` VALUES (38, 1, 52);
--- 普通成员(role 7)：除「角色管理(role:list)」外的全部权限
-INSERT INTO `admin_role_permission` (`role_id`, `permission_id`)
-SELECT 7, `id` FROM `admin_permission` WHERE `permission_code` IS NULL OR `permission_code` <> 'role:list';
+INSERT INTO `admin_role_permission` VALUES (39, 7, 1);
+INSERT INTO `admin_role_permission` VALUES (40, 7, 10);
+INSERT INTO `admin_role_permission` VALUES (41, 7, 11);
+INSERT INTO `admin_role_permission` VALUES (42, 7, 12);
+INSERT INTO `admin_role_permission` VALUES (43, 7, 13);
+INSERT INTO `admin_role_permission` VALUES (44, 7, 14);
+INSERT INTO `admin_role_permission` VALUES (45, 7, 20);
+INSERT INTO `admin_role_permission` VALUES (46, 7, 21);
+INSERT INTO `admin_role_permission` VALUES (47, 7, 22);
+INSERT INTO `admin_role_permission` VALUES (48, 7, 23);
+INSERT INTO `admin_role_permission` VALUES (49, 7, 24);
+INSERT INTO `admin_role_permission` VALUES (50, 7, 25);
+INSERT INTO `admin_role_permission` VALUES (51, 7, 26);
+INSERT INTO `admin_role_permission` VALUES (52, 7, 27);
+INSERT INTO `admin_role_permission` VALUES (53, 7, 28);
+INSERT INTO `admin_role_permission` VALUES (54, 7, 29);
+INSERT INTO `admin_role_permission` VALUES (55, 7, 30);
+INSERT INTO `admin_role_permission` VALUES (56, 7, 31);
+INSERT INTO `admin_role_permission` VALUES (57, 7, 32);
+INSERT INTO `admin_role_permission` VALUES (58, 7, 35);
+INSERT INTO `admin_role_permission` VALUES (59, 7, 36);
+INSERT INTO `admin_role_permission` VALUES (60, 7, 37);
+INSERT INTO `admin_role_permission` VALUES (61, 7, 38);
+INSERT INTO `admin_role_permission` VALUES (62, 7, 39);
+INSERT INTO `admin_role_permission` VALUES (63, 7, 40);
+INSERT INTO `admin_role_permission` VALUES (64, 7, 41);
+INSERT INTO `admin_role_permission` VALUES (65, 7, 42);
+INSERT INTO `admin_role_permission` VALUES (66, 7, 48);
+INSERT INTO `admin_role_permission` VALUES (67, 7, 49);
+INSERT INTO `admin_role_permission` VALUES (68, 7, 50);
+INSERT INTO `admin_role_permission` VALUES (69, 7, 51);
+INSERT INTO `admin_role_permission` VALUES (70, 7, 52);
 
 -- ----------------------------
 -- Table structure for admin_user
@@ -243,12 +293,14 @@ CREATE TABLE `admin_user`  (
   `deleted` tinyint(0) NOT NULL DEFAULT 0 COMMENT '逻辑删除 0未删 1已删',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 4 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '后台管理员' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_user
 -- ----------------------------
-INSERT INTO `admin_user` VALUES (1, 'admin', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '超级管理员', NULL, NULL, NULL, 1, '2026-06-26 22:58:45', '0:0:0:0:0:0:0:1', '系统初始化创建', '2026-06-24 10:52:38', '2026-06-26 22:58:45', 0);
+INSERT INTO `admin_user` VALUES (1, 'admin', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '超级管理员', NULL, NULL, NULL, 1, '2026-06-27 21:28:51', '183.254.112.65', '系统初始化创建', '2026-06-24 10:52:38', '2026-06-27 21:28:51', 0);
+INSERT INTO `admin_user` VALUES (2, 'member_test', '$2a$10$gZpaYmU6xLntKpC1QZ1bAuD5Cd3LrIoSqG8DgDA6PnQuTRGFD51.G', '普通成员测试', NULL, NULL, NULL, 1, '2026-06-27 20:48:39', '183.254.112.65', NULL, '2026-06-27 20:46:42', '2026-06-27 20:59:12', 1);
+INSERT INTO `admin_user` VALUES (3, 'chaolin', '$2a$10$5BAzwzH2imL8mlg2L2/8jeb3Up/QixFhbT2wXPRkV8P4UUztAYiye', '郭超林', NULL, NULL, NULL, 1, '2026-06-27 21:28:21', '183.254.112.65', NULL, '2026-06-27 21:27:23', '2026-06-27 21:28:21', 0);
 
 -- ----------------------------
 -- Table structure for admin_user_role
@@ -262,12 +314,13 @@ CREATE TABLE `admin_user_role`  (
   UNIQUE INDEX `uk_admin_role`(`admin_id`, `role_id`) USING BTREE,
   INDEX `idx_admin`(`admin_id`) USING BTREE,
   INDEX `idx_role`(`role_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '管理员角色关联' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 3 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '管理员角色关联' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Records of admin_user_role
 -- ----------------------------
 INSERT INTO `admin_user_role` VALUES (1, 1, 1);
+INSERT INTO `admin_user_role` VALUES (2, 2, 7);
 
 -- ----------------------------
 -- Table structure for sys_config
