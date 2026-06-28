@@ -16,11 +16,11 @@ mysql:
 # ---------- MySQL 连接变量（zhouyi = APP 业务库，从库，只读）—— 待填写真实数据 ----------
 # 说明：留空不影响启动（zhouyi 数据源 lazy=true，首次使用才连接）。填写后即可读取 APP 运营数据。
 mysql-zhouyi:
-  host: ''                               # TODO 待填写：zhouyi 库 IP（如与 operations 同实例则同为 122.51.175.128）
-  port: 23306                            # TODO 待填写：端口
+  host: 122.51.175.128
+  port: 23306
   database: zhouyi                       # 数据库名
-  username: ''                           # TODO 待填写：用户名
-  password: ''                           # TODO 待填写：密码
+  username: ydzz
+  password: 'yd.zzCC#$keji'
 
 # ---------- Redis 连接变量 ----------
 redis:
@@ -29,6 +29,13 @@ redis:
   password: "ydzz.@KeJi#."                          # Redis 密码（无密码则为空字符串）
   database: 5                           # 使用的数据库编号
 
+# ---------- 高德地图 IP 定位（登录/操作日志 地区解析；沿用 VisitInfoServiceImpl 的 Key） ----------
+amap:
+  key: 'a0aea882477a1b77b97eee0e8fc07a30'   # 高德 Web 服务 Key（IP 定位）；国内 IP 精确到省/市，国外用 ip-api 取国家城市并标记异常
+
+# ---------- 本机公网 IP echo 服务（本地开发取「当前设备所在网络的外网IP」） ----------
+ip:
+  echo-url: 'http://ip-api.com/line/?fields=query'   # 取本机公网IP(纯文本，HTTP)；生产环境优先用 X-Forwarded-For，不依赖此项
 
 # ============================================================
 # Spring 框架配置
