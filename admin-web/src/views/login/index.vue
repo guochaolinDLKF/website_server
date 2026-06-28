@@ -1,7 +1,7 @@
 <template>
   <div class="login-root">
     <div class="login-box">
-      <div class="login-title">运营后台管理系统</div>
+      <div class="login-title">易德自在运营管理</div>
       <div class="login-subtitle">Operation Admin System</div>
       <el-form ref="formRef" :model="form" :rules="rules" size="large" @keyup.enter="onSubmit">
         <el-form-item prop="username">

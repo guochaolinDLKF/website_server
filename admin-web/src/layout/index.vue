@@ -2,7 +2,7 @@
   <div class="layout-root">
     <div class="layout-sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
       <div class="logo">
-        <span v-if="!appStore.sidebarCollapsed">运营后台管理系统</span>
+        <span v-if="!appStore.sidebarCollapsed">易德自在运营管理</span>
         <span v-else>运营</span>
       </div>
       <Sidebar />
