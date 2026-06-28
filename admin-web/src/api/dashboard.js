@@ -29,6 +29,11 @@ export function getRetention(params = { days: 30 }) {
   return request.get('/dashboard/retention', { params })
 }
 
+// 新增用户第 N 日留存（retentionDay=1 次日 / 7 七日）：{ dim, start, end, retentionDay }
+export function getNewUserRetention(params = { dim: 'day', retentionDay: 1 }) {
+  return request.get('/dashboard/new-user-retention', { params })
+}
+
 // 人均在线时长/启动次数：传 { days } 或 { start, end }，返回 { duration, launch }
 export function getOnlineStats(params = { days: 30 }) {
   return request.get('/dashboard/online-stats', { params })
@@ -42,6 +47,11 @@ export function getRealtimeOnline(params = {}) {
 // 日均在线人数趋势（多日）：{ dim: 'day'|'week'|'month' }
 export function getOnlineTrend(params = { dim: 'day' }) {
   return request.get('/dashboard/online-trend', { params })
+}
+
+// 人均登录次数与在线时长趋势（柱=人均登录次数，线=人均登录时长秒）：{ dim, start, end }
+export function getLoginStatsTrend(params = { dim: 'day' }) {
+  return request.get('/dashboard/login-stats-trend', { params })
 }
 
 // 实时新增用户：{ date|start|end, bucket, cumulative: 0|1 }
@@ -107,6 +117,16 @@ export function getFirstDayPayTrend(params = { dim: 'day' }) {
 // 注册后阶段累计付费人数（同期群表格）：{ start, end, maxStage }
 export function getRegStagePayCohort(params = {}) {
   return request.get('/dashboard/reg-stage-pay-cohort', { params })
+}
+
+// 首次付费留存率（同期群表格）：{ dim, start, end, maxStage }
+export function getFirstPayRetentionCohort(params = { dim: 'day' }) {
+  return request.get('/dashboard/first-pay-retention-cohort', { params })
+}
+
+// 流失用户趋势（多折线：3/7/14/30 日流失）：{ start, end }
+export function getChurnTrend(params = {}) {
+  return request.get('/dashboard/churn-trend', { params })
 }
 
 // 付费流水构成（按权益）环形图：{ start, end }

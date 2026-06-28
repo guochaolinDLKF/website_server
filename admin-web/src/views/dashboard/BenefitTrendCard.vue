@@ -17,19 +17,20 @@
     </div>
 
     <div class="bt-tabs">
-      <!-- 统计粒度 -->
-      <el-popover ref="granPopRef" trigger="click" placement="bottom-start" :width="120" popper-class="gm-pop">
-        <template #reference>
-          <span class="bt-tab bt-gran">{{ DIM_LABEL[dim] }}<i class="bt-caret">▾</i></span>
-        </template>
-        <div class="gm-menu">
-          <div class="gm-row" :class="{ active: dim === 'day' }" @click="pickDim('day')">按天</div>
-          <div class="gm-row" :class="{ active: dim === 'week' }" @click="pickDim('week')">按周</div>
-          <div class="gm-row" :class="{ active: dim === 'month' }" @click="pickDim('month')">按月</div>
-        </div>
-      </el-popover>
-
-      <span class="bt-sep">|</span>
+      <!-- 统计粒度（可选） -->
+      <template v-if="showGranularity">
+        <el-popover ref="granPopRef" trigger="click" placement="bottom-start" :width="120" popper-class="gm-pop">
+          <template #reference>
+            <span class="bt-tab bt-gran">{{ DIM_LABEL[dim] }}<i class="bt-caret">▾</i></span>
+          </template>
+          <div class="gm-menu">
+            <div class="gm-row" :class="{ active: dim === 'day' }" @click="pickDim('day')">按天</div>
+            <div class="gm-row" :class="{ active: dim === 'week' }" @click="pickDim('week')">按周</div>
+            <div class="gm-row" :class="{ active: dim === 'month' }" @click="pickDim('month')">按月</div>
+          </div>
+        </el-popover>
+        <span class="bt-sep">|</span>
+      </template>
 
       <!-- 分组（权益）选择 -->
       <el-popover trigger="click" placement="bottom-start" :width="200" popper-class="gm-pop">
@@ -73,7 +74,8 @@ const props = defineProps({
   api: { type: Function, required: true }, // 返回 { labels, benefits, series:[{name,data}], latestLabel }
   valueType: { type: String, default: 'amount' }, // amount=金额 | percent=百分比
   defaultVisible: { type: Number, default: 0 }, // >0 时首次仅默认显示前 N 条线（其余可在分组里勾选）
-  defaultPreset: { type: String, default: 'past7' }
+  defaultPreset: { type: String, default: 'past7' },
+  showGranularity: { type: Boolean, default: true } // 是否显示「按天/周/月」粒度下拉
 })
 
 const PALETTE = ['#3b82f6', '#f59e0b', '#6366f1', '#22d3ee', '#fbbf24', '#0ea5e9', '#10b981', '#f97316', '#8b5cf6', '#ec4899', '#14b8a6', '#ef4444', '#a3a3a3']

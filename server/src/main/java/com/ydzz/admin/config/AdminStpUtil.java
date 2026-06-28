@@ -47,6 +47,16 @@ public final class AdminStpUtil {
         return STP_LOGIC.isLogin();
     }
 
+    /**
+     * 将某账号此前在「所有设备」上的会话顶下线（被顶下线，BE_REPLACED）。
+     *
+     * <p>用于「单设备登录（新登录顶掉旧的）」：本设备登录前先调用本方法，
+     * 旧设备下次请求时即被挤下线。device 传 null 表示不区分设备、全部顶下线。</p>
+     */
+    public static void replaced(Object loginId) {
+        STP_LOGIC.replaced(loginId, null);
+    }
+
     public static void checkLogin() {
         STP_LOGIC.checkLogin();
     }

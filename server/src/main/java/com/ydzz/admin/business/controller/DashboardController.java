@@ -84,6 +84,21 @@ public class DashboardController {
         return Result.success(dashboardService.nextDayRetention(days));
     }
 
+    @Operation(summary = "新增用户第 N 日留存（retentionDay=1 次日/7 七日；dim=day/week/month）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/new-user-retention")
+    public Result<Map<String, Object>> newUserRetention(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(defaultValue = "30") int days,
+            @RequestParam(defaultValue = "1") int retentionDay) {
+        if (start != null && end != null) {
+            return Result.success(dashboardService.newUserRetention(start, end, dim, retentionDay));
+        }
+        return Result.success(dashboardService.newUserRetention(days, dim, retentionDay));
+    }
+
     @Operation(summary = "人均在线时长/启动次数（dim=day/week/month，含日环比同比、均值总和）")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
     @GetMapping("/online-stats")
@@ -123,6 +138,16 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
         return Result.success(dashboardService.onlineTrend(dim, start, end));
+    }
+
+    @Operation(summary = "人均登录次数与在线时长趋势（dim=day/week/month；柱=人均登录次数，线=人均登录时长秒）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/login-stats-trend")
+    public Result<Map<String, Object>> loginStatsTrend(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.loginStatsTrend(dim, start, end));
     }
 
     @Operation(summary = "实时新增用户（单日今日+昨日VS；传 start/end 跨多日则区间连续+前一周期VS；cumulative=1 累计）")
@@ -270,6 +295,26 @@ public class DashboardController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
             @RequestParam(defaultValue = "7") int maxStage) {
         return Result.success(dashboardService.regStagePayCohort(dim, start, end, maxStage));
+    }
+
+    @Operation(summary = "首次付费留存率（同期群表格；dim=day/week/month，maxStage=首付后最大阶段数）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/first-pay-retention-cohort")
+    public Result<Map<String, Object>> firstPayRetentionCohort(
+            @RequestParam(defaultValue = "day") String dim,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(defaultValue = "6") int maxStage) {
+        return Result.success(dashboardService.firstPayRetentionCohort(dim, start, end, maxStage));
+    }
+
+    @Operation(summary = "流失用户趋势（多折线：3/7/14/30 日流失；按天，默认最近30天）")
+    @SaCheckPermission(type = AdminStpUtil.TYPE, value = "dashboard:view")
+    @GetMapping("/churn-trend")
+    public Result<Map<String, Object>> churnTrend(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+        return Result.success(dashboardService.churnTrend(start, end));
     }
 
     @Operation(summary = "付费流水构成（按权益）：所选区间成功支付金额按权益拆分，用于环形图")

@@ -17,8 +17,9 @@ export function changeAdminUserStatus(id, status) {
   return request.post(`/admin-user/${id}/status`, null, { params: { status } })
 }
 
-export function resetAdminUserPwd(id, newPassword) {
-  return request.post(`/admin-user/${id}/reset-pwd`, null, { params: { newPassword } })
+// 重置为系统默认密码（无需传密码）
+export function resetAdminUserPwd(id) {
+  return request.post(`/admin-user/${id}/reset-pwd`)
 }
 
 export function deleteAdminUser(id) {

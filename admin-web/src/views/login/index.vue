@@ -18,7 +18,7 @@
         </el-form-item>
         <el-form-item prop="captcha">
           <div class="captcha-row">
-            <el-input v-model="form.captcha" placeholder="请输入验证码" :prefix-icon="Picture" @keyup.enter="onSubmit" />
+            <el-input v-model="form.captcha" placeholder="请输入计算结果" :prefix-icon="Picture" @keyup.enter="onSubmit" />
             <img
               class="captcha-img"
               :src="captchaImg"
@@ -34,7 +34,6 @@
           </el-button>
         </el-form-item>
       </el-form>
-      <div class="login-tip">默认超级管理员 admin / Admin@123（首次登录后请尽快修改密码）</div>
     </div>
   </div>
 </template>
@@ -53,12 +52,12 @@ const userStore = useUserStore()
 
 const formRef = ref()
 const loading = ref(false)
-const form = reactive({ username: 'admin', password: '', captcha: '', captchaId: '' })
+const form = reactive({ username: '', password: '', captcha: '', captchaId: '' })
 const captchaImg = ref('')
 const rules = {
   username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  captcha: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+  captcha: [{ required: true, message: '请输入计算结果', trigger: 'blur' }]
 }
 
 async function refreshCaptcha() {
@@ -133,20 +132,15 @@ onMounted(refreshCaptcha)
 }
 .captcha-img {
   height: 40px;
-  width: 120px;
+  width: 140px;
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   cursor: pointer;
   flex-shrink: 0;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fff;
 }
 .login-btn {
   width: 100%;
-}
-.login-tip {
-  font-size: 12px;
-  color: #c0c4cc;
-  text-align: center;
-  margin-top: 4px;
 }
 </style>

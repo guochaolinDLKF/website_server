@@ -144,6 +144,25 @@ public interface DashboardMapper {
             + "GROUP BY DATE(u.createTime) ORDER BY d")
     List<Map<String, Object>> nextDayRetention(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    /**
+     * 区间 [start,end) 内按注册日统计「第 N 日留存」：d=注册日, reg=注册数, retained=第 N 日留存数。
+     *
+     * <p>留存窗口 = [注册日 + offset 天, 注册日 + offsetNext 天)；次日留存即 offset=1、offsetNext=2，
+     * 7 日留存即 offset=7、offsetNext=8。</p>
+     */
+    @Select("SELECT DATE(u.createTime) AS d, "
+            + "COUNT(DISTINCT u.id) AS reg, "
+            + "COUNT(DISTINCT e.creator) AS retained "
+            + "FROM user u "
+            + "LEFT JOIN custom_event e "
+            + "  ON e.creator = u.id AND e.deleted_flag = 'N' "
+            + "  AND e.create_time >= DATE_ADD(DATE(u.createTime), INTERVAL #{offset} DAY) "
+            + "  AND e.create_time <  DATE_ADD(DATE(u.createTime), INTERVAL #{offsetNext} DAY) "
+            + "WHERE u.createTime >= #{start} AND u.createTime < #{end} "
+            + "GROUP BY DATE(u.createTime) ORDER BY d")
+    List<Map<String, Object>> newUserRetention(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end,
+                                               @Param("offset") int offset, @Param("offsetNext") int offsetNext);
+
     /** 区间 [start,end) 内新增用户的注册时间流水（t=createTime），用于按 bucket 分桶统计实时新增 */
     @Select("SELECT createTime AS t FROM user WHERE createTime >= #{start} AND createTime < #{end} ORDER BY createTime")
     List<Map<String, Object>> newUserStream(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
@@ -223,6 +242,24 @@ public interface DashboardMapper {
             + "WHERE payment_status = 'SUCCESS' AND user_id IS NOT NULL "
             + "AND payment_time >= #{start} AND payment_time < #{end}")
     List<Map<String, Object>> payUserDays(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /**
+     * 「首次成功支付」日落在 [start,end) 内的用户（uid, d=首次支付日），用于「首次付费留存」同期群。
+     *
+     * <p>对全量成功支付按用户取最早一笔(MIN)，再用 HAVING 过滤首次支付落在区间内的用户，
+     * 保证 d 确为该用户「首次付费日」（全历史最早）。</p>
+     */
+    @Select("SELECT user_id AS uid, MIN(DATE(payment_time)) AS d FROM payments "
+            + "WHERE payment_status = 'SUCCESS' AND user_id IS NOT NULL "
+            + "GROUP BY user_id "
+            + "HAVING MIN(payment_time) >= #{start} AND MIN(payment_time) < #{end}")
+    List<Map<String, Object>> firstPayUserDays(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
+
+    /** 区间 [start,end) 内有行为事件的（uid, d=活跃日）去重，用于留存(活跃)同期群统计 */
+    @Select("SELECT DISTINCT creator AS uid, DATE(create_time) AS d FROM custom_event "
+            + "WHERE deleted_flag = 'N' AND creator IS NOT NULL "
+            + "AND create_time >= #{start} AND create_time < #{end}")
+    List<Map<String, Object>> eventUserDays(@Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
     /**
      * 区间 [start,end) 内按「权益」(item_name) 聚合「充值成功的支付金额总和」：name=权益名称, amt=金额合计。

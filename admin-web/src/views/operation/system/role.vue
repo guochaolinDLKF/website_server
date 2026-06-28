@@ -80,8 +80,9 @@
         <el-form-item label="账号" prop="username">
           <el-input v-model="form.username" :disabled="!!form.id" placeholder="登录账号" />
         </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" show-password :placeholder="form.id ? '留空表示不修改' : '请输入初始密码'" />
+        <el-form-item v-if="!form.id" label="初始密码">
+          <el-input :model-value="DEFAULT_PASSWORD" disabled />
+          <div class="pwd-rule-tip">新增成员将使用系统默认密码，首次登录后请尽快修改</div>
         </el-form-item>
         <el-form-item label="姓名"><el-input v-model="form.realName" /></el-form-item>
         <el-form-item label="状态"><el-switch v-model="form.status" :active-value="1" :inactive-value="0" /></el-form-item>
@@ -99,7 +100,8 @@
           <el-input v-model="pwdForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="至少6位" />
+          <el-input v-model="pwdForm.newPassword" type="password" show-password placeholder="按规则设置新密码" />
+          <div class="pwd-rule-tip">{{ PASSWORD_RULE_TEXT }}</div>
         </el-form-item>
         <el-form-item label="确认密码" prop="confirmPassword">
           <el-input v-model="pwdForm.confirmPassword" type="password" show-password placeholder="再次输入新密码" />
@@ -121,6 +123,7 @@ import { Plus, Search, Refresh } from '@element-plus/icons-vue'
 import { pageAdminUsers, saveAdminUser, changeAdminUserStatus, resetAdminUserPwd, deleteAdminUser } from '@/api/adminUser'
 import { changePassword } from '@/api/auth'
 import { useUserStore } from '@/store/user'
+import { PASSWORD_RULE_TEXT, DEFAULT_PASSWORD, passwordValidator } from '@/utils/password'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -140,9 +143,9 @@ const dialogVisible = ref(false)
 const formRef = ref()
 const emptyForm = () => ({ id: null, username: '', password: '', realName: '', status: 1 })
 const form = reactive(emptyForm())
+// 新增成员密码由系统默认（DEFAULT_PASSWORD），无需手动填写，故仅校验账号
 const rules = {
-  username: [{ required: true, message: '请输入账号', trigger: 'blur' }],
-  password: [{ validator: (r, v, cb) => (!form.id && !v ? cb(new Error('新增时密码必填')) : cb()), trigger: 'blur' }]
+  username: [{ required: true, message: '请输入账号', trigger: 'blur' }]
 }
 
 async function loadData() {
@@ -183,14 +186,11 @@ async function toggleStatus(row) {
   ElMessage.success('操作成功')
   loadData()
 }
+// 超级管理员无条件重置：将成员密码重置为系统默认密码
 async function openReset(row) {
-  const { value } = await ElMessageBox.prompt(`为「${row.username}」设置新密码`, '重置密码', {
-    inputType: 'password',
-    inputPlaceholder: '请输入新密码（至少6位）',
-    inputValidator: (v) => (v && v.length >= 6 ? true : '密码至少6位')
-  })
-  await resetAdminUserPwd(row.id, value)
-  ElMessage.success('密码已重置')
+  await ElMessageBox.confirm(`确定将「${row.username}」的密码重置为默认密码「${DEFAULT_PASSWORD}」吗？`, '重置密码', { type: 'warning' })
+  await resetAdminUserPwd(row.id)
+  ElMessage.success(`已重置为默认密码：${DEFAULT_PASSWORD}`)
 }
 async function onDelete(row) {
   await ElMessageBox.confirm(`确定删除成员「${row.username}」吗？`, '提示', { type: 'warning' })
@@ -206,7 +206,7 @@ const pwdFormRef = ref()
 const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
 const pwdRules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
-  newPassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }, { min: 6, message: '密码至少6位', trigger: 'blur' }],
+  newPassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }, { validator: passwordValidator, trigger: 'blur' }],
   confirmPassword: [
     { required: true, message: '请确认新密码', trigger: 'blur' },
     { validator: (r, v, cb) => (v !== pwdForm.newPassword ? cb(new Error('两次输入的密码不一致')) : cb()), trigger: 'blur' }
@@ -232,3 +232,12 @@ async function onChangeOwnPwd() {
 
 loadData()
 </script>
+
+<style scoped>
+.pwd-rule-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #909399;
+}
+</style>

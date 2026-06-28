@@ -71,13 +71,13 @@ public class AdminUserController {
         return Result.success("操作成功", "ok");
     }
 
-    @Operation(summary = "重置密码")
+    @Operation(summary = "重置密码（无条件重置为系统默认密码）")
     @SaCheckPermission(type = AdminStpUtil.TYPE, value = "admin:edit")
     @OperationLog(module = "管理员管理", operation = "重置密码")
     @PostMapping("/{id}/reset-pwd")
-    public Result<String> resetPwd(@PathVariable Long id, @RequestParam String newPassword) {
-        adminUserService.resetPassword(id, newPassword);
-        return Result.success("重置成功", "ok");
+    public Result<String> resetPwd(@PathVariable Long id) {
+        adminUserService.resetPassword(id);
+        return Result.success("已重置为默认密码：" + AdminUserService.DEFAULT_PASSWORD, AdminUserService.DEFAULT_PASSWORD);
     }
 
     @Operation(summary = "删除管理员")

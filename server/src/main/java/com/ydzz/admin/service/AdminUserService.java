@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.BCrypt;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.ydzz.admin.common.PasswordPolicy;
 import com.ydzz.admin.config.AdminStpUtil;
 import com.ydzz.admin.dto.AdminUserSaveRequest;
 import com.ydzz.admin.entity.AdminRole;
@@ -32,6 +33,8 @@ public class AdminUserService {
     private static final String MEMBER_ROLE_CODE = "MEMBER";
     /** 超级管理员角色编码：禁止禁用/删除拥有该角色的账号 */
     private static final String SUPER_ADMIN_ROLE_CODE = "SUPER_ADMIN";
+    /** 系统默认密码：新增成员、超管重置密码时统一使用（符合密码强度规则） */
+    public static final String DEFAULT_PASSWORD = "ydzz.@KeJi#.6688";
 
     private final AdminUserMapper adminUserMapper;
     private final AdminUserRoleMapper userRoleMapper;
@@ -92,10 +95,10 @@ public class AdminUserService {
             if (getByUsername(req.getUsername()) != null) {
                 throw new BusinessException(ErrorCode.Conflict, "账号已存在");
             }
-            if (StrUtil.isBlank(req.getPassword())) {
-                throw new BusinessException(ErrorCode.BadRequest, "新增管理员必须设置密码");
-            }
-            entity.setPassword(BCrypt.hashpw(req.getPassword()));
+            // 新增：密码留空则使用系统默认密码；若指定了自定义密码则必须符合强度规则
+            String pwd = StrUtil.isBlank(req.getPassword()) ? DEFAULT_PASSWORD : req.getPassword();
+            PasswordPolicy.check(pwd);
+            entity.setPassword(BCrypt.hashpw(pwd));
             adminUserMapper.insert(entity);
         } else {
             AdminUser exist = adminUserMapper.selectById(req.getId());
@@ -105,6 +108,7 @@ public class AdminUserService {
             entity.setId(req.getId());
             // 密码留空表示不修改
             if (StrUtil.isNotBlank(req.getPassword())) {
+                PasswordPolicy.check(req.getPassword());
                 entity.setPassword(BCrypt.hashpw(req.getPassword()));
             }
             adminUserMapper.updateById(entity);
@@ -173,17 +177,15 @@ public class AdminUserService {
         adminUserMapper.updateById(update);
     }
 
-    public void resetPassword(Long id, String newPassword) {
-        if (StrUtil.isBlank(newPassword)) {
-            throw new BusinessException(ErrorCode.BadRequest, "新密码不能为空");
-        }
+    /** 超级管理员重置密码：无条件将指定成员密码重置为系统默认密码。 */
+    public void resetPassword(Long id) {
         AdminUser exist = adminUserMapper.selectById(id);
         if (exist == null) {
             throw new BusinessException(ErrorCode.NotFound, "管理员不存在");
         }
         AdminUser update = new AdminUser();
         update.setId(id);
-        update.setPassword(BCrypt.hashpw(newPassword));
+        update.setPassword(BCrypt.hashpw(DEFAULT_PASSWORD));
         adminUserMapper.updateById(update);
     }
 
@@ -195,6 +197,7 @@ public class AdminUserService {
         if (!BCrypt.checkpw(oldPassword, exist.getPassword())) {
             throw new BusinessException(ErrorCode.BadRequest, "原密码不正确");
         }
+        PasswordPolicy.check(newPassword);
         AdminUser update = new AdminUser();
         update.setId(adminId);
         update.setPassword(BCrypt.hashpw(newPassword));

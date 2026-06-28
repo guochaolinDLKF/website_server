@@ -7,7 +7,8 @@
           <el-input v-model="form.oldPassword" type="password" show-password placeholder="请输入原密码" />
         </el-form-item>
         <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="form.newPassword" type="password" show-password placeholder="至少6位" />
+          <el-input v-model="form.newPassword" type="password" show-password placeholder="按规则设置新密码" />
+          <div class="pwd-rule-tip">{{ PASSWORD_RULE_TEXT }}</div>
         </el-form-item>
         <el-form-item label="确认新密码" prop="confirm">
           <el-input v-model="form.confirm" type="password" show-password placeholder="再次输入新密码" />
@@ -26,6 +27,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { changePassword } from '@/api/auth'
 import { useUserStore } from '@/store/user'
+import { PASSWORD_RULE_TEXT, passwordValidator } from '@/utils/password'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -36,7 +38,7 @@ const rules = {
   oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
   newPassword: [
     { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码至少6位', trigger: 'blur' }
+    { validator: passwordValidator, trigger: 'blur' }
   ],
   confirm: [
     { required: true, message: '请再次输入新密码', trigger: 'blur' },
@@ -62,3 +64,12 @@ async function onSubmit() {
   }
 }
 </script>
+
+<style scoped>
+.pwd-rule-tip {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #909399;
+}
+</style>

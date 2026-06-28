@@ -1,9 +1,0 @@
-# 日志配置文件
-logging:
-  config: classpath:logback-spring.xml
-  # 设置日志级别 debug(调试 ) < info(消息) < warn(警告) < error(错误) < fatal(严重错误)
-  level:
-    root: info
-    com:
-      baomidou:
-        mybatisplus: DEBUG

@@ -22,13 +22,35 @@
         />
       </el-col>
     </el-row>
+
+    <el-row :gutter="16" style="margin-top: 16px">
+      <el-col :xs="24" :md="12">
+        <DualBarLineCard
+          title="人均登录次数和在线时长"
+          :tip="loginStatsTip"
+          bar-name="人均登录次数"
+          bar-unit="次"
+          line-name="人均登录时长"
+          line-unit="秒"
+          :api="getLoginStatsTrend"
+          default-preset="past7"
+        />
+      </el-col>
+    </el-row>
   </div>
 </template>
 
 <script setup>
 import ActiveTrendCard from '../../dashboard/ActiveTrendCard.vue'
 import DonutCompositionCard from '../../dashboard/DonutCompositionCard.vue'
-import { getActiveTrend, getActiveLifecycleDist } from '@/api/dashboard'
+import DualBarLineCard from '../../dashboard/DualBarLineCard.vue'
+import { getActiveTrend, getActiveLifecycleDist, getLoginStatsTrend } from '@/api/dashboard'
+
+const loginStatsTip =
+  '会话化口径：从登录开始，相邻操作间隔 ≤20 分钟算同一次在线\n' +
+  '柱·人均登录次数 = 当期会话数（启动次数）合计 ÷ 当期活跃用户数\n' +
+  '折线·人均登录时长(秒) = 当期会话时长合计 ÷ 当期活跃用户数\n' +
+  '仅统计已完整结束的自然日；按周/月时取周期内各日人均值的平均'
 
 const activeTrendTip =
   '活跃 = 当期有行为事件的去重用户\n' +

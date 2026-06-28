@@ -11,9 +11,9 @@
       <el-dropdown trigger="click" @command="handleCommand">
         <span class="user-info">
           <el-avatar :size="30" :src="userStore.avatar">
-            {{ (userStore.username || 'A').charAt(0).toUpperCase() }}
+            {{ (userStore.realName || userStore.username || 'A').charAt(0).toUpperCase() }}
           </el-avatar>
-          <span class="user-name">{{ userStore.username }}</span>
+          <span class="user-name">{{ userStore.realName || userStore.username }}</span>
           <el-icon><CaretBottom /></el-icon>
         </span>
         <template #dropdown>

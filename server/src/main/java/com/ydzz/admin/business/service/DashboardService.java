@@ -329,7 +329,30 @@ public class DashboardService {
      * 若收敛后起始日晚于结束日则返回空。周/月维度按加权留存率聚合：周期留存率 = 周期内 Σ次留 ÷ Σ新增 ×100。</p>
      */
     public Map<String, Object> nextDayRetention(LocalDate start, LocalDate end, String dim) {
-        LocalDate maxCohort = LocalDate.now().minusDays(2);     // 次日已完整的最大注册日
+        return newUserRetention(start, end, dim, 1);
+    }
+
+    /**
+     * 新增用户第 N 日留存（最近 days 个注册日，dim=day/week/month）。
+     *
+     * <p>未指定区间时取最近 days 个「第 N 日已完整」的注册日。offset=留存天数（次日=1，7日留存=7）。</p>
+     */
+    public Map<String, Object> newUserRetention(int days, String dim, int offset) {
+        int n = days <= 0 ? 30 : days;
+        LocalDate end = LocalDate.now().minusDays(offset + 1L);   // 第 N 日已完整的最大注册日
+        LocalDate start = end.minusDays(n - 1L);
+        return newUserRetention(start, end, dim, offset);
+    }
+
+    /**
+     * 新增用户第 N 日留存（指定注册日区间 [start,end]，dim=day/week/month）。
+     *
+     * <p>留存率 = 当日注册用户中、第 N 日(注册日+offset)有行为事件的去重用户数 ÷ 当日注册数 ×100。
+     * 结束日收敛到「第 N 日已完整」的最大注册日(today-(offset+1))；周/月维度按加权留存率聚合。
+     * offset=1 即次日留存，offset=7 即 7 日留存。</p>
+     */
+    public Map<String, Object> newUserRetention(LocalDate start, LocalDate end, String dim, int offset) {
+        LocalDate maxCohort = LocalDate.now().minusDays(offset + 1L);   // 第 N 日已完整的最大注册日
         if (end == null || end.isAfter(maxCohort)) {
             end = maxCohort;
         }
@@ -343,7 +366,8 @@ public class DashboardService {
         }
 
         Map<String, long[]> m = new LinkedHashMap<>();    // dateStr -> [reg, retained]
-        for (Map<String, Object> row : dashboardMapper.nextDayRetention(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+        for (Map<String, Object> row : dashboardMapper.newUserRetention(
+                start.atStartOfDay(), end.plusDays(1).atStartOfDay(), offset, offset + 1)) {
             String d = String.valueOf(row.get("d")).substring(0, 10);
             long reg = ((Number) row.get("reg")).longValue();
             long retained = row.get("retained") == null ? 0L : ((Number) row.get("retained")).longValue();
@@ -526,6 +550,55 @@ public class DashboardService {
         data.put("duration", buildSeries(durMap, start, end, dim));
         data.put("launch", buildSeries(lauMap, start, end, dim));
         return data;
+    }
+
+    /**
+     * 人均登录次数 / 人均登录时长趋势（柱=人均登录次数，线=人均登录时长「秒」；dim=day/week/month）。
+     *
+     * <p>复用 {@link #onlineStats(LocalDate, LocalDate, String)} 的会话化口径：相邻操作间隔 ≤20 分钟算同一次在线，
+     * 「登录次数」= 会话数（启动次数），「登录时长」= 会话时长合计，均取当期「人均值」。
+     * 在线时长底层以分钟计算，这里统一换算为「秒」返回，便于前端按秒展示。
+     * 返回扁平双指标结构供前端「柱+线」卡片消费：
+     * {@code { labels, bars(登录次数), lines(登录时长秒), barLatest, lineLatest, latestLabel } }。
+     * 未指定区间时按 dim 取默认窗口（与人均在线时长面板一致）。</p>
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> loginStatsTrend(String dim, LocalDate start, LocalDate end) {
+        Map<String, Object> base = (start != null && end != null)
+                ? onlineStats(start, end, dim)
+                : onlineStats(30, dim);
+        Map<String, Object> launch = (Map<String, Object>) base.get("launch");     // 人均登录次数（次）
+        Map<String, Object> duration = (Map<String, Object>) base.get("duration"); // 人均在线时长（分钟）
+
+        List<Map<String, Object>> launchPts = launch == null
+                ? Collections.emptyList() : (List<Map<String, Object>>) launch.getOrDefault("points", Collections.emptyList());
+        List<Map<String, Object>> durPts = duration == null
+                ? Collections.emptyList() : (List<Map<String, Object>>) duration.getOrDefault("points", Collections.emptyList());
+
+        List<String> labels = new ArrayList<>();
+        List<BigDecimal> bars = new ArrayList<>();   // 人均登录次数
+        List<BigDecimal> lines = new ArrayList<>();  // 人均登录时长（秒）
+        for (Map<String, Object> p : launchPts) {
+            labels.add((String) p.get("label"));
+            bars.add((BigDecimal) p.get("value"));
+        }
+        for (Map<String, Object> p : durPts) {
+            lines.add(toSeconds((BigDecimal) p.get("value")));
+        }
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("labels", labels);
+        data.put("bars", bars);
+        data.put("lines", lines);
+        data.put("barLatest", launch == null ? null : launch.get("latest"));
+        data.put("lineLatest", toSeconds(duration == null ? null : (BigDecimal) duration.get("latest")));
+        data.put("latestLabel", launch == null ? "" : launch.getOrDefault("latestLabel", ""));
+        return data;
+    }
+
+    /** 分钟（BigDecimal）换算为秒，保留 2 位小数；null 透传。 */
+    private BigDecimal toSeconds(BigDecimal minutes) {
+        return minutes == null ? null : minutes.multiply(BigDecimal.valueOf(60)).setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -2588,6 +2661,208 @@ public class DashboardService {
         }
         summary.put("cells", sumCells);
         data.put("summary", summary);
+        return data;
+    }
+
+    /**
+     * 首次付费留存率（同期群表格，按 天/周/月）。
+     *
+     * <p>行=「首次成功支付日」同期群（按 dim 分到 天/周/月），列=充值成功用户数 + 第 0..maxStage 个单位。
+     * 每格两个数：第 N 单位留存人数(该群用户在第 N 单位内有行为事件=活跃) 与 留存率(=该数÷同期群人数)。
+     * 「当日」即首次付费当日的活跃率(≈100%)。仅纳入「第 N 单位已完整」的格子，未完整返回 null。
+     * 汇总行（阶段值）：充值成功用户总数 + 各阶段按「该阶段已完整的同期群」加权的留存人数/率。</p>
+     */
+    public Map<String, Object> firstPayRetentionCohort(String dim, LocalDate start, LocalDate end, int maxStage) {
+        LocalDate today = LocalDate.now();
+        if (end == null || end.isAfter(today)) {
+            end = today;
+        }
+        if (start == null) {
+            if ("week".equalsIgnoreCase(dim)) {
+                start = mondayOf(end).minusWeeks(6);
+            } else if ("month".equalsIgnoreCase(dim)) {
+                start = end.withDayOfMonth(1).minusMonths(6);
+            } else {
+                start = end.minusDays(6);
+            }
+        }
+        start = (LocalDate) bucketOf(dim, start)[2];
+        if (maxStage <= 0) {
+            maxStage = 6;
+        }
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("dim", dim);
+        List<Integer> stages = new ArrayList<>();
+        for (int i = 0; i <= maxStage; i++) {
+            stages.add(i);
+        }
+        data.put("stages", stages);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        data.put("rows", rows);
+        if (start.isAfter(end)) {
+            data.put("summary", null);
+            return data;
+        }
+
+        // 同期群用户：首次成功支付日(按 dim 分桶) -> 用户集合。
+        // 先用所选区间内的每个周期桶占位（保证「无首次付费用户」的周期也成行展示，覆盖完整时间区间）。
+        Map<LocalDate, Set<String>> cohortUsers = new TreeMap<>();
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            cohortUsers.putIfAbsent((LocalDate) bucketOf(dim, d)[2], new HashSet<>());
+        }
+        for (Map<String, Object> row : dashboardMapper.firstPayUserDays(start.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            Object uid = row.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            LocalDate cs = (LocalDate) bucketOf(dim, d)[2];
+            cohortUsers.computeIfAbsent(cs, k -> new HashSet<>()).add(String.valueOf(uid));
+        }
+
+        // 用户活跃日（行为事件）：范围覆盖到最晚同期群的最大阶段末
+        LocalDate lastCohortStart = (LocalDate) bucketOf(dim, end)[2];
+        LocalDate evtEnd = stageRange(dim, lastCohortStart, maxStage)[1];
+        Map<String, Set<LocalDate>> userEventDays = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.eventUserDays(start.atStartOfDay(), evtEnd.plusDays(1).atStartOfDay())) {
+            Object uid = row.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            userEventDays.computeIfAbsent(String.valueOf(uid), k -> new HashSet<>()).add(d);
+        }
+
+        long sumReg = 0;
+        long[] sumDay = new long[maxStage + 1];        // 各阶段留存人数合计（仅已完整同期群）
+        long[] sumRegByStage = new long[maxStage + 1]; // 各阶段「已完整同期群」的人数合计（作分母）
+        for (Map.Entry<LocalDate, Set<String>> ent : cohortUsers.entrySet()) {
+            LocalDate cs = ent.getKey();
+            Set<String> users = ent.getValue();
+            int reg = users.size();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("date", cs.toString());
+            row.put("label", periodLabel(dim, cs));
+            row.put("reg", reg);
+            List<Map<String, Object>> cells = new ArrayList<>();
+            sumReg += reg;
+            for (int n = 0; n <= maxStage; n++) {
+                LocalDate[] sr = stageRange(dim, cs, n);
+                Map<String, Object> cell = new LinkedHashMap<>();
+                if (sr[1].isAfter(today)) {
+                    cell.put("day", null);
+                    cell.put("rate", null);
+                    cells.add(cell);
+                    continue;
+                }
+                int cnt = 0;
+                for (String uid : users) {
+                    Set<LocalDate> ev = userEventDays.get(uid);
+                    if (ev != null && paidInRange(ev, sr[0], sr[1])) {
+                        cnt++;
+                    }
+                }
+                cell.put("day", cnt);
+                cell.put("rate", reg > 0 ? BigDecimal.valueOf(cnt * 100.0 / reg).setScale(2, RoundingMode.HALF_UP) : null);
+                cells.add(cell);
+                sumDay[n] += cnt;
+                sumRegByStage[n] += reg;
+            }
+            row.put("cells", cells);
+            rows.add(row);
+        }
+
+        // 汇总行（阶段值）：充值成功用户总数 + 各阶段按「已完整同期群」加权的留存人数/率
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("reg", sumReg);
+        List<Map<String, Object>> sumCells = new ArrayList<>();
+        for (int n = 0; n <= maxStage; n++) {
+            Map<String, Object> cell = new LinkedHashMap<>();
+            cell.put("day", sumDay[n]);
+            cell.put("rate", sumRegByStage[n] > 0
+                    ? BigDecimal.valueOf(sumDay[n] * 100.0 / sumRegByStage[n]).setScale(2, RoundingMode.HALF_UP) : null);
+            sumCells.add(cell);
+        }
+        summary.put("cells", sumCells);
+        data.put("summary", summary);
+        return data;
+    }
+
+    /**
+     * 流失用户趋势（按天，多折线：3/7/14/30 日流失）。
+     *
+     * <p>口径：第 D 日「N 日流失」= 在过去 N 天 [D−N, D−1] 内有过行为事件(活跃)、但第 D 日未活跃的去重用户数。
+     * N 越大回看窗口越长，流失人数越多。返回 {@code { labels, benefits, series:[{name,data}], latestLabel }}，
+     * benefits/series 顺序为 30/14/7/3 日（与图例、调色板对齐）。默认区间=最近 30 天。</p>
+     */
+    public Map<String, Object> churnTrend(LocalDate start, LocalDate end) {
+        LocalDate today = LocalDate.now();
+        if (end == null || end.isAfter(today)) {
+            end = today;
+        }
+        if (start == null) {
+            start = end.minusDays(29);
+        }
+        int[] windows = {30, 14, 7, 3};
+        String[] names = {"30日流失", "14日流失", "7日流失", "3日流失"};
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        List<String> labels = new ArrayList<>();
+        List<String> benefits = new ArrayList<>();
+        List<Map<String, Object>> series = new ArrayList<>();
+        List<List<Object>> seriesData = new ArrayList<>();
+        for (String n : names) {
+            benefits.add(n);
+            List<Object> d = new ArrayList<>();
+            Map<String, Object> s = new LinkedHashMap<>();
+            s.put("name", n);
+            s.put("data", d);
+            series.add(s);
+            seriesData.add(d);
+        }
+        data.put("labels", labels);
+        data.put("benefits", benefits);
+        data.put("series", series);
+        data.put("latestLabel", "");
+        if (start.isAfter(end)) {
+            return data;
+        }
+
+        // 活跃日 -> 去重用户；向前多取 30 天用于回看窗口
+        LocalDate evtStart = start.minusDays(30);
+        Map<LocalDate, Set<String>> activeByDay = new HashMap<>();
+        for (Map<String, Object> row : dashboardMapper.eventUserDays(evtStart.atStartOfDay(), end.plusDays(1).atStartOfDay())) {
+            Object uid = row.get("uid");
+            if (uid == null) {
+                continue;
+            }
+            LocalDate d = LocalDate.parse(String.valueOf(row.get("d")).substring(0, 10));
+            activeByDay.computeIfAbsent(d, k -> new HashSet<>()).add(String.valueOf(uid));
+        }
+
+        String latestLabel = "";
+        for (LocalDate d = start; !d.isAfter(end); d = d.plusDays(1)) {
+            labels.add(d.toString().substring(5).replace('-', '/'));   // MM/dd
+            Set<String> todaySet = activeByDay.getOrDefault(d, Collections.emptySet());
+            for (int wi = 0; wi < windows.length; wi++) {
+                Set<String> window = new HashSet<>();
+                for (int k = 1; k <= windows[wi]; k++) {
+                    Set<String> s = activeByDay.get(d.minusDays(k));
+                    if (s != null) {
+                        window.addAll(s);
+                    }
+                }
+                int churn = 0;
+                for (String u : window) {
+                    if (!todaySet.contains(u)) {
+                        churn++;
+                    }
+                }
+                seriesData.get(wi).add(churn);
+            }
+            latestLabel = fmtDateCn(d);
+        }
+        data.put("latestLabel", latestLabel);
         return data;
     }
 
