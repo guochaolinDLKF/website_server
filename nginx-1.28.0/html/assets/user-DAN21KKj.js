@@ -1,0 +1,1 @@
+import{S as r}from"./index-BLtDNo7l.js";function u(e){return r.get("/user/page",{params:e})}function n(e){return r.get(`/user/${e}`)}function a(e,t){return r.post(`/user/${e}/status`,null,{params:{status:t}})}function o(e){return r.get("/user/export",{params:e})}export{a as c,o as e,n as g,u as p};

@@ -120,3 +120,6 @@
 2025/10/14 11:18:51 [warn] 6920#3964: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
 2025/10/14 11:18:51 [warn] 38608#36772: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
 2025/10/14 11:19:01 [notice] 40180#36100: signal process started
+2026/06/29 11:27:01 [emerg] 36664#37024: invalid event type "epoll" in ./conf/nginx.conf:16
+2026/06/29 11:36:33 [notice] 35476#41032: signal process started
+2026/06/29 11:39:53 [notice] 31928#40528: signal process started

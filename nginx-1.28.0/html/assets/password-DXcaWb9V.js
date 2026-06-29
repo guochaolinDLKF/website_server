@@ -1,0 +1,1 @@
+const s="密码须包含数字、大小写字母、特殊符号，且长度大于12位",e="ydzz.@KeJi#.6688",n=/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{13,}$/;function A(o,t,r){return t?n.test(t)?r():r(new Error(s)):r()}export{e as D,s as P,A as p};
