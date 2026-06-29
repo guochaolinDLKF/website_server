@@ -19,8 +19,8 @@ mysql-zhouyi:
   host: 47.101.202.247                              # TODO 待填写：zhouyi 生产库 IP
   port: 23306                           # TODO 待填写：端口
   database: zhouyi                      # 数据库名
-  username: ''                          # TODO 待填写：用户名
-  password: ''                          # TODO 待填写：密码
+  username: ydzz                          # TODO 待填写：用户名
+  password: 'yd.zzCC#$keji'                          # TODO 待填写：密码
 
 # ---------- Redis 连接变量 ----------
 redis:
