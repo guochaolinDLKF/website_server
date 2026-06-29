@@ -7,7 +7,7 @@ WORKDIR /app
 # 接收 deploy-*.bat 通过 --build-arg 传入的构建参数
 # 默认值与 deploy-config.bat 中的 PROJECT_ARTIFACT_ID / PROJECT_VERSION 保持一致
 ARG BUILD_ARTIFACT_ID=website_server
-ARG BUILD_VERSION=1.0.0
+ARG BUILD_VERSION=1.0.1
 
 # 时区
 ENV TZ=Asia/Shanghai
@@ -27,3 +27,9 @@ ENV JAVA_OPTS="-Xms512m -Xmx1024m -XX:+UseG1GC"
 
 # 启动应用
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+
+
+
+
+
+

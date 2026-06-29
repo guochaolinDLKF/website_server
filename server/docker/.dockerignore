@@ -13,7 +13,7 @@ logs/
 
 # 临时文件
 target/
-!target/website_server-1.0.0.jar
+!target/website_server-*.jar
 
 # 文档
 README.md

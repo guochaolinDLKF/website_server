@@ -1,74 +1,72 @@
 @echo off
-chcp 65001 >nul
+REM ============================================================
+REM  apply-version.bat
+REM  Sync PROJECT_ARTIFACT_ID and PROJECT_VERSION from
+REM  deploy-config.bat into pom.xml and Dockerfile.
+REM
+REM  Usage: apply-version.bat
+REM   1. Edit PROJECT_VERSION in deploy-config.bat
+REM   2. Run this script to sync pom.xml + Dockerfile
+REM   3. Run: cd .. && mvn clean package -DskipTests
+REM ============================================================
 
-if not exist "deploy-config.bat" goto :err_cfg
-call deploy-config.bat
-if "%PROJECT_VERSION%"=="" goto :err_ver
-if "%PROJECT_ARTIFACT_ID%"=="" goto :err_art
+setlocal enabledelayedexpansion
 
-echo Config loaded.
-echo   PROJECT_ARTIFACT_ID = %PROJECT_ARTIFACT_ID%
-echo   PROJECT_VERSION     = %PROJECT_VERSION%
-echo.
+REM -- Get this script's directory --
+set SCRIPT_DIR=%~dp0
 
-set "POM=..\pom.xml"
-set "DF=Dockerfile"
+REM -- 0. Check deploy-config.bat exists --
+if not exist "%SCRIPT_DIR%deploy-config.bat" (
+    echo [X] deploy-config.bat not found in "%SCRIPT_DIR%"
+    exit /b 1
+)
 
-if not exist "%POM%" goto :err_pom
-echo [1/2] syncing pom.xml ...
-REM Use regex \d+\.\d+\.\d+ so that ANY prior version (1.0.0 or 1.0.3 etc) gets
-REM replaced. This makes forward bumps AND rolls-back both work in one bat run.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-Content -LiteralPath '%POM%' -Raw -Encoding UTF8) -replace '<artifactId>website_server</artifactId>', '<artifactId>%PROJECT_ARTIFACT_ID%</artifactId>' -replace '<version>\d+\.\d+\.\d+</version>', '<version>%PROJECT_VERSION%</version>' -replace '<name>website_server</name>', '<name>%PROJECT_ARTIFACT_ID%</name>' | Set-Content -LiteralPath '%POM%' -Encoding UTF8 -NoNewline"
-if errorlevel 1 goto :err_pwsh
-echo [1/2] pom.xml synced.
-echo.
+REM -- 1. Load variables from deploy-config.bat --
+call "%SCRIPT_DIR%deploy-config.bat"
 
-if not exist "%DF%" goto :err_df
-echo [2/2] syncing Dockerfile ...
-REM Same regex approach. Replaces any existing version default with the deploy-config one.
-powershell -NoProfile -ExecutionPolicy Bypass -Command "(Get-Content -LiteralPath '%DF%' -Raw -Encoding UTF8) -replace 'ARG BUILD_ARTIFACT_ID=\S+', 'ARG BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID%' -replace 'ARG BUILD_VERSION=\d+\.\d+\.\d+', 'ARG BUILD_VERSION=%PROJECT_VERSION%' | Set-Content -LiteralPath '%DF%' -Encoding UTF8 -NoNewline"
-if errorlevel 1 goto :err_pwsh
-echo [2/2] Dockerfile synced.
+if "%PROJECT_ARTIFACT_ID%"=="" (
+    echo [X] PROJECT_ARTIFACT_ID is empty. Check deploy-config.bat.
+    exit /b 1
+)
+if "%PROJECT_VERSION%"=="" (
+    echo [X] PROJECT_VERSION is empty. Check deploy-config.bat.
+    exit /b 1
+)
+
+echo [*] Syncing: %PROJECT_ARTIFACT_ID% v%PROJECT_VERSION%
 echo.
 
-echo Done.
-echo.
-pause
-exit /b 0
+REM -- 2. Update pom.xml (targeted: only the project-level <version>) --
+set POM_PATH=%SCRIPT_DIR%..\pom.xml
+if not exist "%POM_PATH%" (
+    echo [X] pom.xml not found: "%POM_PATH%"
+    exit /b 1
+)
 
-:err_cfg
-echo [X] deploy-config.bat not found in server\docker\
-pause
-exit /b 1
-:err_ver
-echo [X] PROJECT_VERSION not set in deploy-config.bat
+powershell -NoProfile -Command ^
+  "$c = Get-Content -Path '%POM_PATH%' -Raw -Encoding UTF8;" ^
+  "$c = $c -replace ('(?<=<artifactId>' + '%PROJECT_ARTIFACT_ID%' + '</artifactId>\s*<version>)[^<]+(?=</version>)'), '%PROJECT_VERSION%';" ^
+  "$c | Set-Content -Path '%POM_PATH%' -Encoding UTF8"
+if %errorlevel% neq 0 (
+    echo [X] Failed to update pom.xml
+    exit /b 1
+)
+echo [1/2] pom.xml        -^> version = %PROJECT_VERSION%
+
+REM -- 3. Update Dockerfile (ARG BUILD_ARTIFACT_ID / BUILD_VERSION) --
+set DOCKERFILE_PATH=%SCRIPT_DIR%Dockerfile
+powershell -NoProfile -Command ^
+  "$c = Get-Content -Path '%DOCKERFILE_PATH%' -Raw;" ^
+  "$c = $c -replace 'ARG BUILD_ARTIFACT_ID=\S+', 'ARG BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID%';" ^
+  "$c = $c -replace 'ARG BUILD_VERSION=\S+', 'ARG BUILD_VERSION=%PROJECT_VERSION%';" ^
+  "$c | Set-Content -Path '%DOCKERFILE_PATH%' -Encoding UTF8"
+if %errorlevel% neq 0 (
+    echo [X] Failed to update Dockerfile
+    exit /b 1
+)
+echo [2/2] Dockerfile     -^> BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID%  BUILD_VERSION=%PROJECT_VERSION%
+
 echo.
-echo   Please open server\docker\deploy-config.bat and set:
-echo.
-echo       set PROJECT_VERSION=1.0.0
-echo.
-echo   under section "1. Project artifactId / version (edit here when releasing)".
-pause
-exit /b 1
-:err_art
-echo [X] PROJECT_ARTIFACT_ID not set in deploy-config.bat
-echo.
-echo   Please open server\docker\deploy-config.bat and set:
-echo.
-echo       set PROJECT_ARTIFACT_ID=website_server
-echo.
-echo   under section "1. Project artifactId / version (edit here when releasing)".
-pause
-exit /b 1
-:err_pom
-echo [X] pom.xml not found at %POM%
-pause
-exit /b 1
-:err_df
-echo [X] Dockerfile not found at %DF%
-pause
-exit /b 1
-:err_pwsh
-echo [X] PowerShell sync failed. Check that PowerShell 5.1+ is installed and execution policy allows scripts.
-pause
-exit /b 1
+echo [OK] All synced. Next: cd .. ^&^& mvn clean package -DskipTests
+
+endlocal

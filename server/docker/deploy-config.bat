@@ -18,7 +18,7 @@ REM ============================================================
 REM  1. 项目 artifactId / 版本 (发版时改)
 REM ============================================================
 set PROJECT_ARTIFACT_ID=website_server
-set PROJECT_VERSION=1.0.0
+set PROJECT_VERSION=1.0.1
 
 REM 自动派生的部署变量 (不要手改)
 set JAR_NAME=%PROJECT_ARTIFACT_ID%-%PROJECT_VERSION%.jar
