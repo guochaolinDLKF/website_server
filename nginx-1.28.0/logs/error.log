@@ -1,0 +1,122 @@
+2025/09/28 11:27:34 [notice] 32180#32488: signal process started
+2025/09/28 11:27:37 [error] 9180#32908: *1 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:27:37 [error] 9180#32908: *2 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:22 [error] 9180#32908: *3 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:22 [error] 9180#32908: *4 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:23 [error] 9180#32908: *5 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:23 [error] 9180#32908: *6 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:24 [error] 9180#32908: *7 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:24 [error] 9180#32908: *8 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:24 [error] 9180#32908: *9 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:24 [error] 9180#32908: *10 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:24 [error] 9180#32908: *11 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:24 [error] 9180#32908: *12 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:26 [error] 9180#32908: *13 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:26 [error] 9180#32908: *14 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:33 [notice] 37168#31896: signal process started
+2025/09/28 11:28:34 [error] 30760#36104: *15 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "127.0.0.1:8911"
+2025/09/28 11:28:35 [error] 30760#36104: *16 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "127.0.0.1:8911", referrer: "http://127.0.0.1:8911/"
+2025/09/28 11:28:46 [error] 30760#36104: *17 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET / HTTP/1.1", host: "localhost:8911"
+2025/09/28 11:28:46 [error] 30760#36104: *18 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 127.0.0.1, server: localhost, request: "GET /favicon.ico HTTP/1.1", host: "localhost:8911", referrer: "http://localhost:8911/"
+2025/09/28 11:29:27 [notice] 27968#31896: signal process started
+2025/09/28 11:47:27 [notice] 37820#37840: signal process started
+2025/10/14 10:46:16 [warn] 33484#36848: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:46:16 [emerg] 33484#36848: cannot load certificate "D:/www/cert/dev.ydzz.cc/dev.ydzz.cc.pem": BIO_new_file() failed (SSL: error:80000003:system library::No such process:calling fopen(D:/www/cert/dev.ydzz.cc/dev.ydzz.cc.pem, r) error:10000080:BIO routines::no such file)
+2025/10/14 10:47:27 [warn] 32096#36344: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:47:27 [emerg] 32096#36344: cannot load certificate "D:/www/cert/dev.ydzz.cc/dev.ydzz.cc.pem": BIO_new_file() failed (SSL: error:80000003:system library::No such process:calling fopen(D:/www/cert/dev.ydzz.cc/dev.ydzz.cc.pem, r) error:10000080:BIO routines::no such file)
+2025/10/14 10:47:36 [warn] 33448#4892: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:47:36 [emerg] 33448#4892: cannot load certificate "D:/www/dev.ydzz.cc/dev.ydzz.cc.pem": BIO_new_file() failed (SSL: error:80000003:system library::No such process:calling fopen(D:/www/dev.ydzz.cc/dev.ydzz.cc.pem, r) error:10000080:BIO routines::no such file)
+2025/10/14 10:48:16 [warn] 32916#27588: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:48:16 [emerg] 32916#27588: cannot load certificate "D:/www/dev.ydzz.cc/dev.ydzz.cc_bundle.pem": BIO_new_file() failed (SSL: error:80000003:system library::No such process:calling fopen(D:/www/dev.ydzz.cc/dev.ydzz.cc_bundle.pem, r) error:10000080:BIO routines::no such file)
+2025/10/14 10:48:34 [warn] 320#34220: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:48:34 [emerg] 320#34220: cannot load certificate "D:/www/dev.ydzz.cc/dev.ydzz.cc_bundle.pem": BIO_new_file() failed (SSL: error:80000003:system library::No such process:calling fopen(D:/www/dev.ydzz.cc/dev.ydzz.cc_bundle.pem, r) error:10000080:BIO routines::no such file)
+2025/10/14 10:49:50 [warn] 33408#36848: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [notice] 33408#36848: signal process started
+2025/10/14 10:49:50 [warn] 39468#39496: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 38936#34004: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 39824#39844: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 23752#39272: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 30116#37644: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 34404#17676: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 33908#39932: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 39688#6984: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:50 [warn] 39476#34416: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 39904#38932: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 39500#39648: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 6264#39564: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 39948#39952: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 40056#40060: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 40164#40168: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 40276#40280: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:51 [warn] 40384#40388: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:52 [warn] 40488#40492: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:52 [warn] 40592#40596: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:49:52 [warn] 40704#40708: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:16
+2025/10/14 10:51:42 [notice] 33128#2560: signal process started
+2025/10/14 10:54:20 [notice] 7076#39764: signal process started
+2025/10/14 11:13:23 [warn] 23752#39932: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 38000#36600: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 33600#30716: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 40668#39808: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 39328#28260: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 5168#19252: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 4628#29628: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 32528#30680: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:23 [warn] 37864#40284: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 40616#2492: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 38524#33572: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 40196#40648: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 35172#676: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 33992#38108: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 40016#31324: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 38932#32312: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 29732#32976: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 33404#40624: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 37940#11856: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:24 [warn] 38704#5156: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:13:25 [warn] 13300#40784: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:06 [warn] 33500#38300: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:06 [notice] 33500#38300: signal process started
+2025/10/14 11:14:06 [warn] 2696#34540: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:06 [warn] 39924#40796: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 39572#22864: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 3464#34008: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 34240#39132: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 16652#38784: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 26656#26448: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 36732#36916: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 2744#39352: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 36596#39096: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 40576#39236: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 39892#34668: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:07 [warn] 21056#37512: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 37060#4388: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 35268#27588: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 39872#39908: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 10220#34012: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 39128#36908: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 39984#34436: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:14:08 [warn] 40728#38192: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 30592#9352: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [notice] 30592#9352: signal process started
+2025/10/14 11:18:49 [warn] 14184#39636: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 40408#13800: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 3828#2936: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 40928#11856: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 6452#39516: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:49 [warn] 34656#2452: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 38056#15020: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 33216#28088: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 4088#39504: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 6464#25332: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 35968#21076: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 40312#38768: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 36624#9008: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 40432#40072: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 32040#38664: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:50 [warn] 524#36784: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:51 [warn] 39616#34780: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:51 [warn] 3336#36304: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:51 [warn] 6920#3964: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:18:51 [warn] 38608#36772: the "listen ... http2" directive is deprecated, use the "http2" directive instead in D:\nginx-1.28.0/conf/nginx.conf:15
+2025/10/14 11:19:01 [notice] 40180#36100: signal process started
