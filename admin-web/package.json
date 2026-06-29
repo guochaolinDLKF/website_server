@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:jar": "vite build --base=/admin/",
+    "preview": "vite preview",
+    "deploy:package": "node scripts/package-dist.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
