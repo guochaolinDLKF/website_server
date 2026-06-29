@@ -17,9 +17,9 @@ set SERVER_IP=%DEV_SERVER_IP%
 set SERVER_PORT=%DEV_SERVER_PORT%
 set SERVER_USER=%DEV_SERVER_USER%
 set SERVER_PASSWORD=%DEV_SERVER_PASSWORD%
-set CONTAINER_NAME=website_server-dev
-set IMAGE_NAME=website_server:dev
-set JAR_NAME=website_server-1.0.0.jar
+set CONTAINER_NAME=%CONTAINER_NAME_DEV%
+set IMAGE_NAME=%IMAGE_NAME_DEV%
+set SPRING_PROFILES_ACTIVE=%SPRING_PROFILE_DEV%
 
 if "%SERVER_IP%"=="" (
     echo [错误] DEV_SERVER_IP 为空，请检查 deploy-config.bat！
@@ -72,10 +72,10 @@ echo [3/8] SSH 连接正常。
 
 echo.
 echo [4/8] 正在上传文件到服务器...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/website_server"
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p %REMOTE_DEPLOY_DIR%"
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
 if %errorlevel% neq 0 ( echo [错误] jar 上传失败！ & pause & exit /b 1 )
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
 if %errorlevel% neq 0 ( echo [错误] Dockerfile 上传失败！ & pause & exit /b 1 )
 echo [4/8] 文件上传完成。
 
@@ -86,13 +86,13 @@ echo [5/8] 旧容器已清理。
 
 echo.
 echo [6/8] 正在构建 Docker 镜像...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/website_server && docker build -t %IMAGE_NAME% ."
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd %REMOTE_DEPLOY_DIR% && docker build --build-arg BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID% --build-arg BUILD_VERSION=%PROJECT_VERSION% -t %IMAGE_NAME% ."
 if %errorlevel% neq 0 ( echo [错误] Docker 镜像构建失败！ & pause & exit /b 1 )
 echo [6/8] 镜像构建完成。
 
 echo.
 echo [7/8] 正在启动容器...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "docker run -d --name %CONTAINER_NAME% -p 8660:8660 -v /home/website_server/logs:/home/website_server/logs --restart unless-stopped -e SPRING_PROFILES_ACTIVE=dev %IMAGE_NAME%"
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "docker run -d --name %CONTAINER_NAME% -p %APP_PORT%:%APP_PORT% -v %REMOTE_LOG_VOLUME% --restart unless-stopped -e SPRING_PROFILES_ACTIVE=%SPRING_PROFILE_DEV% %IMAGE_NAME%"
 if %errorlevel% neq 0 ( echo [错误] 容器启动失败！ & pause & exit /b 1 )
 echo [7/8] 容器已启动。
 

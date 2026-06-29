@@ -1,13 +1,14 @@
 @echo off
 chcp 65001 >nul
 echo ========================================
-echo Deploy Script (PROD - expect mode)
+echo  部署脚本（生产环境 - expect 自动输密码模式）
 echo ========================================
+echo.
 
 if exist "deploy-config.bat" (
     call deploy-config.bat
 ) else (
-    echo [ERROR] deploy-config.bat not found!
+    echo [错误] 找不到 deploy-config.bat！
     pause
     exit /b 1
 )
@@ -16,58 +17,58 @@ set SERVER_IP=%PROD_SERVER_IP%
 set SERVER_PORT=%PROD_SERVER_PORT%
 set SERVER_USER=%PROD_SERVER_USER%
 set SERVER_PASSWORD=%PROD_SERVER_PASSWORD%
-set CONTAINER_NAME=website_server-prod
-set IMAGE_NAME=website_server:prod
-set JAR_NAME=website_server-1.0.0.jar
+set CONTAINER_NAME=%CONTAINER_NAME_PROD%
+set IMAGE_NAME=%IMAGE_NAME_PROD%
 
-echo Server: %SERVER_USER%@%SERVER_IP%:%SERVER_PORT%
+echo 服务器: %SERVER_USER%@%SERVER_IP%:%SERVER_PORT%
 echo.
 
 if not exist jar\%JAR_NAME% (
-    echo jar not found! Run build first.
+    echo [错误] 找不到 jar 包，请先跑 mvn clean package
     pause
     exit /b 1
 )
 
-echo Uploading via expect...
+echo 正在通过 expect 模式上传...
+echo.
 
-echo Creating remote dir...
+echo 创建远程部署目录...
 expect -c "
 set timeout 30
-spawn ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% \"mkdir -p /home/docker/server\"
+spawn ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% \"mkdir -p %REMOTE_DEPLOY_DIR%\"
 expect \"password:\"
 send \"%SERVER_PASSWORD%\r\"
 expect eof
 "
 
-echo Uploading jar...
+echo 上传 jar 包...
 expect -c "
 set timeout 60
-spawn scp -o StrictHostKeyChecking=no -P %SERVER_PORT% jar/%JAR_NAME% %SERVER_USER%@%SERVER_IP%:/home/docker/server/
+spawn scp -o StrictHostKeyChecking=no -P %SERVER_PORT% jar/%JAR_NAME% %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
 expect \"password:\"
 send \"%SERVER_PASSWORD%\r\"
 expect eof
 "
 
-echo Uploading Dockerfile...
+echo 上传 Dockerfile...
 expect -c "
 set timeout 30
-spawn scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/server/
+spawn scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
 expect \"password:\"
 send \"%SERVER_PASSWORD%\r\"
 expect eof
 "
 
-echo Building and deploying...
+echo 构建镜像并启动容器...
 expect -c "
 set timeout 300
-spawn ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% \"cd /home/docker/server && docker stop %CONTAINER_NAME% 2>/dev/null; docker rm %CONTAINER_NAME% 2>/dev/null; docker rmi %IMAGE_NAME% 2>/dev/null; docker build -t %IMAGE_NAME% . && docker run -d --name %CONTAINER_NAME% -p 8660:8660 -v /home/website_server/logs:/home/website_server/logs --restart unless-stopped -e SPRING_PROFILES_ACTIVE=prod %IMAGE_NAME%\"
+spawn ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% \"cd %REMOTE_DEPLOY_DIR% && docker stop %CONTAINER_NAME% 2>/dev/null; docker rm %CONTAINER_NAME% 2>/dev/null; docker rmi %IMAGE_NAME% 2>/dev/null; docker build --build-arg BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID% --build-arg BUILD_VERSION=%PROJECT_VERSION% -t %IMAGE_NAME% . && docker run -d --name %CONTAINER_NAME% -p %APP_PORT%:%APP_PORT% -v %REMOTE_LOG_VOLUME% --restart unless-stopped -e SPRING_PROFILES_ACTIVE=%SPRING_PROFILE_PROD% %IMAGE_NAME%\"
 expect \"password:\"
 send \"%SERVER_PASSWORD%\r\"
 expect eof
 "
 
-echo Checking status...
+echo 检查容器状态...
 expect -c "
 set timeout 30
 spawn ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% \"docker ps | grep %CONTAINER_NAME%\"
@@ -78,7 +79,7 @@ expect eof
 
 echo.
 echo ========================================
-echo Deploy complete!
-echo URL: http://%SERVER_IP%:8660
+echo  部署完成！
+echo  访问地址: http://%SERVER_IP%:8660
 echo ========================================
 pause

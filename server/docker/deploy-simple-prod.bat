@@ -1,76 +1,109 @@
 @echo off
-setlocal enabledelayedexpansion
 chcp 65001 >nul
 echo ========================================
-echo  Deploy Script (PROD)
+echo  部署脚本（生产环境）
 echo ========================================
 echo.
 
 if not exist "deploy-config.bat" (
-    echo [ERROR] deploy-config.bat not found!
+    echo [错误] 找不到 deploy-config.bat！
     pause
     exit /b 1
 )
 call deploy-config.bat
+echo 配置加载成功，服务器 IP: %PROD_SERVER_IP%
 
 set SERVER_IP=%PROD_SERVER_IP%
 set SERVER_PORT=%PROD_SERVER_PORT%
 set SERVER_USER=%PROD_SERVER_USER%
 set SERVER_PASSWORD=%PROD_SERVER_PASSWORD%
-set CONTAINER_NAME=website_server-prod
-set IMAGE_NAME=website_server:prod
-set JAR_NAME=website_server-1.0.0.jar
+set CONTAINER_NAME=%CONTAINER_NAME_PROD%
+set IMAGE_NAME=%IMAGE_NAME_PROD%
+set SPRING_PROFILES_ACTIVE=%SPRING_PROFILE_PROD%
 
 if "%SERVER_IP%"=="" (
-    echo [ERROR] PROD_SERVER_IP is empty! Check deploy-config.bat
+    echo [错误] PROD_SERVER_IP 为空，请检查 deploy-config.bat！
     pause
     exit /b 1
 )
 
-echo [1/8] Building jar ...
+echo.
+echo [1/8] 正在构建 jar 包...
 pushd ..
 call mvn clean package -DskipTests
-if !errorlevel! neq 0 ( echo [ERROR] Maven build failed! & popd & pause & exit /b 1 )
+if %errorlevel% neq 0 (
+    echo [错误] Maven 构建失败！
+    popd
+    pause
+    exit /b 1
+)
 popd
-echo [1/8] OK.
+echo [1/8] jar 构建完成。
 
-echo [2/8] Copying jar ...
-if not exist "..\target\%JAR_NAME%" ( echo [ERROR] Jar not found! & pause & exit /b 1 )
+echo.
+echo [2/8] 正在复制 jar 包...
+if not exist "..\target\%JAR_NAME%" (
+    echo [错误] jar 包不存在: ..\target\%JAR_NAME%
+    pause
+    exit /b 1
+)
 if not exist "jar" mkdir jar
 copy "..\target\%JAR_NAME%" "jar\" >nul
-if !errorlevel! neq 0 ( echo [ERROR] Jar copy failed! & pause & exit /b 1 )
-echo [2/8] OK.
+if %errorlevel% neq 0 (
+    echo [错误] jar 复制失败！
+    pause
+    exit /b 1
+)
+echo [2/8] jar 复制完成。
 
-echo [3/8] Checking SSH ...
+echo.
+echo [3/8] 正在检查 SSH 连接...
 ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "echo OK"
-if !errorlevel! neq 0 ( echo [ERROR] SSH failed to %SERVER_USER%@%SERVER_IP% & pause & exit /b 1 )
-echo [3/8] OK.
+if %errorlevel% neq 0 (
+    echo [错误] SSH 连接失败！目标: %SERVER_USER%@%SERVER_IP%:%SERVER_PORT%
+    echo 请确认:
+    echo   1. deploy-config.bat 中的服务器 IP 正确
+    echo   2. 已配置 SSH 密钥: ssh %SERVER_USER%@%SERVER_IP%
+    echo   3. 服务器防火墙已开放 %SERVER_PORT% 端口
+    pause
+    exit /b 1
+)
+echo [3/8] SSH 连接正常。
 
-echo [4/8] Uploading files ...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p /home/docker/website_server"
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
-scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:/home/docker/website_server/
-if !errorlevel! neq 0 ( echo [ERROR] Upload failed! & pause & exit /b 1 )
-echo [4/8] OK.
+echo.
+echo [4/8] 正在上传文件到服务器...
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "mkdir -p %REMOTE_DEPLOY_DIR%"
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% "jar\%JAR_NAME%" %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
+if %errorlevel% neq 0 ( echo [错误] jar 上传失败！ & pause & exit /b 1 )
+scp -o StrictHostKeyChecking=no -P %SERVER_PORT% Dockerfile %SERVER_USER%@%SERVER_IP%:%REMOTE_DEPLOY_DIR%/
+if %errorlevel% neq 0 ( echo [错误] Dockerfile 上传失败！ & pause & exit /b 1 )
+echo [4/8] 文件上传完成。
 
-echo [5/8] Stopping old container ...
+echo.
+echo [5/8] 正在停止旧容器...
 ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "docker stop %CONTAINER_NAME% 2>/dev/null; docker rm %CONTAINER_NAME% 2>/dev/null; echo done"
-echo [5/8] OK.
+echo [5/8] 旧容器已清理。
 
-echo [6/8] Building image on server ...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd /home/docker/website_server && docker build -t %IMAGE_NAME% ."
-if !errorlevel! neq 0 ( echo [ERROR] Docker build failed! & pause & exit /b 1 )
-echo [6/8] OK.
+echo.
+echo [6/8] 正在构建 Docker 镜像...
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "cd %REMOTE_DEPLOY_DIR% && docker build --build-arg BUILD_ARTIFACT_ID=%PROJECT_ARTIFACT_ID% --build-arg BUILD_VERSION=%PROJECT_VERSION% -t %IMAGE_NAME% ."
+if %errorlevel% neq 0 ( echo [错误] Docker 镜像构建失败！ & pause & exit /b 1 )
+echo [6/8] 镜像构建完成。
 
-echo [7/8] Starting container ...
-ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "docker run -d --name %CONTAINER_NAME% -p 8660:8660 -v /home/website_server/logs:/home/website_server/logs --restart unless-stopped -e SPRING_PROFILES_ACTIVE=prod %IMAGE_NAME%"
-if !errorlevel! neq 0 ( echo [ERROR] Container start failed! & pause & exit /b 1 )
-echo [7/8] OK.
+echo.
+echo [7/8] 正在启动容器...
+ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "docker run -d --name %CONTAINER_NAME% -p %APP_PORT%:%APP_PORT% -v %REMOTE_LOG_VOLUME% --restart unless-stopped -e SPRING_PROFILES_ACTIVE=%SPRING_PROFILE_PROD% %IMAGE_NAME%"
+if %errorlevel% neq 0 ( echo [错误] 容器启动失败！ & pause & exit /b 1 )
+echo [7/8] 容器已启动。
 
-echo [8/8] Verifying ...
+echo.
+echo [8/8] 正在验证部署结果...
 ssh -o StrictHostKeyChecking=no -p %SERVER_PORT% %SERVER_USER%@%SERVER_IP% "sleep 8 && docker ps | grep %CONTAINER_NAME% && echo --- && docker logs --tail 20 %CONTAINER_NAME%"
+
 echo.
 echo ========================================
-echo  Deploy Complete!  URL: http://%SERVER_IP%:8660
+echo  部署完成！
+echo  访问地址: http://%SERVER_IP%:8660
+echo  Swagger:  http://%SERVER_IP%:8660/swagger-ui.html
 echo ========================================
 pause

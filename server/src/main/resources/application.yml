@@ -15,4 +15,4 @@ server:
 # ---------- 环境选择 ----------
 spring:
   profiles:
-    active: local-dev                    # 激活的环境，可选：local-dev | dev | prod
+    active: prod                    # 激活的环境，可选：local-dev | dev | prod
