@@ -9,9 +9,9 @@
 mysql:
   host: 47.100.111.124                  # 生产数据库 IP
   port: 23306                            # 数据库端口
-  database: operations               # 数据库名
-  username: ydzz               # 用户名
-  password: 'ydzz.@KeJi#.'             # 密码
+  database: website               # 数据库名
+  username: root               # 用户名
+  password: 'yd.zzCC#$keji'             # 密码
 
 # ---------- MySQL 连接变量（zhouyi = APP 业务库，从库，只读）—— 待填写真实数据 ----------
 # 说明：留空不影响启动（zhouyi 数据源 lazy=true，首次使用才连接）。
